@@ -7,7 +7,7 @@ Go library for persisting user activity logs with:
 - optional service-level tracker for business/repository operations
 - metadata merge, JSON redaction, and geolocation helpers
 
-Repository: `https://github.com/PayRam/activity-log`  
+Repository: `https://github.com/PayRam/user-activity-go`  
 Module path: `github.com/PayRam/user-activity-go`
 
 ## Install
