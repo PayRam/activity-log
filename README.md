@@ -1,4 +1,4 @@
-# user-activity-go
+# activity-log
 
 Go library for persisting user activity logs with:
 
@@ -7,13 +7,13 @@ Go library for persisting user activity logs with:
 - optional service-level tracker for business/repository operations
 - metadata merge, JSON redaction, and geolocation helpers
 
-Repository: `https://github.com/PayRam/user-activity-go`  
-Module path: `github.com/PayRam/user-activity-go`
+Repository: `https://github.com/PayRam/activity-log`  
+Module path: `github.com/PayRam/activity-log`
 
 ## Install
 
 ```bash
-go get github.com/PayRam/user-activity-go
+go get github.com/PayRam/activity-log
 ```
 
 ## Quick Start
@@ -24,7 +24,7 @@ package main
 import (
 	"context"
 
-	"github.com/PayRam/user-activity-go/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/useractivity"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -88,7 +88,7 @@ This is useful when one API call triggers multiple service operations.
 ## File Structure
 
 ```text
-user-activity-go/
+activity-log/
 ├── cmd/
 │   └── example/                     # runnable integration sample
 ├── pkg/
@@ -132,6 +132,13 @@ Dependency direction:
 - `ConfigProvider ConfigProvider` (optional): can override export limit (`user.activity.export.limit`)
 - `MemberResolver MemberResolver` (optional): hydrates `Activity.Member` in `Get`
 - `ExternalPlatformResolver ExternalPlatformResolver` (optional): hydrates `Activity.ExternalPlatforms` in `Get`
+
+## Environment Variables
+
+- `USER_ACTIVITY_POSTGRES_DSN`: PostgreSQL DSN used by `cmd/example` (required when running the example server)
+- `USER_ACTIVITY_TEST_POSTGRES_DSN`: PostgreSQL DSN used by integration tests that need a real database
+- `GEOLOCATION_PROVIDER_URL`: geolocation provider URL template fallback (used when `GeoLookupConfig.ProviderURLTemplate` is empty)
+- `GEOLOCATION_PROVIDER_NAME`: geolocation provider name fallback (used when `GeoLookupConfig.ProviderName` is empty)
 
 ## Integrating with Different Naming
 
@@ -345,6 +352,8 @@ Behavior:
 - export mode can use config key `user.activity.export.limit`
 - if both `ExternalPlatformIDs` and `ProjectFilter` are set, request is rejected
 - if `AccessResolver` is configured, non-admin scope is enforced
+- supported `ProjectFilter` values are `ALL` and `NO_IDS`
+- unknown `ProjectFilter` values are rejected as unauthorized
 
 ### `GetEventCategories(ctx)`
 
@@ -375,8 +384,8 @@ Both middleware packages follow the same model:
 
 Packages:
 
-- Gin: `github.com/PayRam/user-activity-go/pkg/useractivity/ginmiddleware`
-- net/http: `github.com/PayRam/user-activity-go/pkg/useractivity/httpmiddleware`
+- Gin: `github.com/PayRam/activity-log/pkg/useractivity/ginmiddleware`
+- net/http: `github.com/PayRam/activity-log/pkg/useractivity/httpmiddleware`
 
 Shared config fields:
 
@@ -388,13 +397,18 @@ Shared config fields:
 - `Redact func([]byte) []byte`
 - `ResponseRedact func([]byte) []byte`
 - `SkipPaths []string`
-- `Skip func(...) bool`
+- `Skip func(*gin.Context) bool` (Gin)
+- `Skip func(*http.Request) bool` (net/http)
 - `SessionIDHeader string`
-- `SessionIDFunc func(...) string`
-- `IPExtractor func(...) string`
+- `SessionIDFunc func(*gin.Context) string` (Gin)
+- `SessionIDFunc func(*http.Request) string` (net/http)
+- `IPExtractor func(*gin.Context) string` (Gin)
+- `IPExtractor func(*http.Request) string` (net/http)
 - `GeoLookup *useractivity.GeoLookup` (optional): enriches request with `Country/City/...` from IP
-- `CreateEnricher func(..., *useractivity.CreateRequest)`
-- `UpdateEnricher func(..., *useractivity.UpdateRequest, *CapturedResponse)`
+- `CreateEnricher func(*gin.Context, *useractivity.CreateRequest)` (Gin)
+- `CreateEnricher func(*http.Request, *useractivity.CreateRequest)` (net/http)
+- `UpdateEnricher func(*gin.Context, *useractivity.UpdateRequest, *ginmiddleware.CapturedResponse)` (Gin)
+- `UpdateEnricher func(*http.Request, *useractivity.UpdateRequest, *httpmiddleware.CapturedResponse)` (net/http)
 - `Async bool`
 - `OnError func(error)`
 
@@ -451,6 +465,15 @@ mw := httpmiddleware.Middleware(httpmiddleware.Config{
 
 Use built-in helpers when you want geolocation outside middleware hooks.
 
+`GeoLookupConfig` fields:
+
+- `ProviderURLTemplate string`
+- `ProviderName string`
+- `Timeout time.Duration`
+- `CacheTTL time.Duration`
+- `Logger *zap.Logger`
+- `HTTPClient *http.Client`
+
 ```go
 lookup := useractivity.NewGeoLookup(useractivity.GeoLookupConfig{
 	ProviderURLTemplate: "https://ipwhois.app/json/%s", // optional
@@ -488,6 +511,15 @@ err := tracker.Track(ctx, useractivity.ServiceOperation{
 	return repo.Create(ctx, memberID)
 })
 ```
+
+`ServiceTrackerConfig` fields:
+
+- `Client *useractivity.Client` (required)
+- `Logger *zap.Logger`
+- `Async bool`
+- `OnError func(error)`
+- `CreateEnricher func(context.Context, *useractivity.CreateRequest)`
+- `UpdateEnricher func(context.Context, *useractivity.UpdateRequest, *useractivity.ServiceResult)`
 
 `ServiceOperation` supported fields:
 
@@ -550,7 +582,7 @@ Important:
 
 ## Gin Handlers (Optional)
 
-Package: `github.com/PayRam/user-activity-go/pkg/useractivity/ginhandlers`
+Package: `github.com/PayRam/activity-log/pkg/useractivity/ginhandlers`
 
 Routes:
 
@@ -595,6 +627,10 @@ Example result:
 - `TablePrefix: "core_", TableName: "activity_logs"` => `core_activity_logs`
 
 ## Testing
+
+Integration tests that touch PostgreSQL require:
+
+- `USER_ACTIVITY_TEST_POSTGRES_DSN`
 
 ```bash
 go test ./...
