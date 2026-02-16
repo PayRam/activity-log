@@ -95,8 +95,11 @@ func (r *UserActivityRepositoryGorm) GetUserActivities(ctx context.Context, filt
 	}
 
 	query = ApplyUserActivitiesPaginationConditions(query, filter)
+	if filter.Order == nil {
+		query = query.Order("created_at DESC")
+	}
 
-	if result := query.Order("created_at DESC").Find(&activities); result.Error != nil {
+	if result := query.Find(&activities); result.Error != nil {
 		if r.logger != nil {
 			r.logger.Error("Failed to fetch user activities", zap.Error(result.Error))
 		}

@@ -50,7 +50,7 @@ type UserActivity struct {
 
 // TableName applies the configured table prefix.
 func (UserActivity) TableName() string {
-	return GetTableName("user_activities")
+	return GetTableName(DefaultUserActivityTableName)
 }
 
 // Scan implements sql.Scanner for reading from database.

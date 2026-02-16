@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,18 +27,20 @@ const (
 // LocationInfo holds geolocation data for an IP address.
 // Supports multiple providers: ipwhois.io, ipapi.co, ipwho.is, ip-api.com.
 type LocationInfo struct {
-	Country     string  `json:"country"`
-	CountryCode string  `json:"country_code"`
-	Region      string  `json:"region"`
-	City        string  `json:"city"`
-	Timezone    string  `json:"timezone"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Success     *bool   `json:"success"` // For ipwhois style responses.
-	Status      string  `json:"status"`  // For ip-api compatibility.
-	Message     string  `json:"message"` // For provider error payloads.
-	Error       bool    `json:"error"`   // For ipapi error payloads.
-	Reason      string  `json:"reason"`  // For ipapi error payloads.
+	Country      string  `json:"country"`
+	CountryCode  string  `json:"country_code"`
+	Region       string  `json:"region"`
+	City         string  `json:"city"`
+	Timezone     string  `json:"timezone"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	HasLatitude  bool    `json:"-"`
+	HasLongitude bool    `json:"-"`
+	Success      *bool   `json:"success"` // For ipwhois style responses.
+	Status       string  `json:"status"`  // For ip-api compatibility.
+	Message      string  `json:"message"` // For provider error payloads.
+	Error        bool    `json:"error"`   // For ipapi error payloads.
+	Reason       string  `json:"reason"`  // For ipapi error payloads.
 }
 
 // UnmarshalJSON normalizes payloads from multiple geolocation providers.
@@ -102,16 +105,28 @@ func (l *LocationInfo) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if aux.Latitude != 0 {
-		l.Latitude = aux.Latitude
-	} else {
-		l.Latitude = aux.Lat
+	if latitude, ok := extractFloat(raw, "latitude", "lat"); ok {
+		l.Latitude = latitude
+		l.HasLatitude = true
+	} else if aux.Latitude != 0 || aux.Lat != 0 {
+		if aux.Latitude != 0 {
+			l.Latitude = aux.Latitude
+		} else {
+			l.Latitude = aux.Lat
+		}
+		l.HasLatitude = true
 	}
 
-	if aux.Longitude != 0 {
-		l.Longitude = aux.Longitude
-	} else {
-		l.Longitude = aux.Lon
+	if longitude, ok := extractFloat(raw, "longitude", "lon"); ok {
+		l.Longitude = longitude
+		l.HasLongitude = true
+	} else if aux.Longitude != 0 || aux.Lon != 0 {
+		if aux.Longitude != 0 {
+			l.Longitude = aux.Longitude
+		} else {
+			l.Longitude = aux.Lon
+		}
+		l.HasLongitude = true
 	}
 
 	if _, ok := raw["success"]; ok {
@@ -349,6 +364,34 @@ func cloneLocation(location *LocationInfo) *LocationInfo {
 		copyLocation.Success = &success
 	}
 	return &copyLocation
+}
+
+func extractFloat(raw map[string]interface{}, keys ...string) (float64, bool) {
+	for _, key := range keys {
+		value, ok := raw[key]
+		if !ok {
+			continue
+		}
+		switch v := value.(type) {
+		case float64:
+			return v, true
+		case float32:
+			return float64(v), true
+		case int:
+			return float64(v), true
+		case int64:
+			return float64(v), true
+		case json.Number:
+			if parsed, err := v.Float64(); err == nil {
+				return parsed, true
+			}
+		case string:
+			if parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+				return parsed, true
+			}
+		}
+	}
+	return 0, false
 }
 
 func (g *GeoLookup) debug(msg string, fields ...zap.Field) {

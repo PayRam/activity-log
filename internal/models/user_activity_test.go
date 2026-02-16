@@ -15,6 +15,17 @@ func TestUserActivityTableName(t *testing.T) {
 	}
 }
 
+func TestUserActivityCustomTableName(t *testing.T) {
+	ResetTablePrefix()
+	t.Cleanup(ResetTablePrefix)
+
+	SetTablePrefix("core_")
+	SetUserActivityTableName("activity_logs")
+	if got := (UserActivity{}).TableName(); got != "core_activity_logs" {
+		t.Fatalf("expected table name core_activity_logs, got %q", got)
+	}
+}
+
 func TestUintSliceScanValue(t *testing.T) {
 	var s UintSlice
 	if err := s.Scan(nil); err != nil {

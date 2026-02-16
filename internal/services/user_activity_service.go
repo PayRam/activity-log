@@ -8,7 +8,7 @@ import (
 )
 
 // UserActivityService provides activity persistence behavior.
-// UserActivityRepository defines storage operations for user activity.
+// It orchestrates create/update/read operations over user activity records.
 type UserActivityService interface {
 	Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error)
 	UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error)

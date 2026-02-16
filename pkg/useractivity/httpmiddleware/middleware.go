@@ -211,8 +211,11 @@ func DefaultIPExtractor(r *http.Request) string {
 	}
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		parts := strings.Split(xff, ",")
-		if len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
+		for _, part := range parts {
+			ip := strings.TrimSpace(part)
+			if ip != "" {
+				return ip
+			}
 		}
 	}
 	if xr := r.Header.Get("X-Real-IP"); xr != "" {

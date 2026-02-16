@@ -56,7 +56,7 @@ var allowedUserActivitySortColumns = map[string]bool{
 }
 
 func ApplyUserActivityGetFilters(query *gorm.DB, filter UserActivityFilters) *gorm.DB {
-	tableName := models.GetTableName("user_activities")
+	tableName := models.GetTableName(models.DefaultUserActivityTableName)
 
 	if len(filter.IDS) > 0 {
 		query = query.Where(fmt.Sprintf("%s.id IN ?", tableName), filter.IDS)

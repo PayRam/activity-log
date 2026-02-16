@@ -8,14 +8,14 @@ type ServiceMetadata struct {
 }
 
 func marshalServiceMetadata(metadata ServiceMetadata) *string {
-	if len(metadata.OperationTrail) == 0 && metadata.OperationName == "" {
+	if len(metadata.OperationTrail) == 0 && metadata.OperationName == "" && metadata.Source == "" {
 		return nil
 	}
 	return MergeMetadata(nil, metadata)
 }
 
 func mergeServiceMetadata(base *string, metadata ServiceMetadata) *string {
-	if len(metadata.OperationTrail) == 0 && metadata.OperationName == "" {
+	if len(metadata.OperationTrail) == 0 && metadata.OperationName == "" && metadata.Source == "" {
 		return base
 	}
 	return MergeMetadata(base, metadata)

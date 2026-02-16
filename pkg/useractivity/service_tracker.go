@@ -3,6 +3,7 @@ package useractivity
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -119,7 +120,7 @@ func (t *ServiceTracker) Track(ctx context.Context, op ServiceOperation, fn func
 		Endpoint:  endpoint,
 		Status:    "STARTED",
 	}
-	createTrail := append(baseTrail, currentStep)
+	createTrail := append(slices.Clone(baseTrail), currentStep)
 
 	metadata := op.Metadata
 	metadata = mergeServiceMetadata(metadata, ServiceMetadata{
@@ -170,7 +171,7 @@ func (t *ServiceTracker) Track(ctx context.Context, op ServiceOperation, fn func
 	status := ErrorToAPIStatus(opErr)
 	finalStep := currentStep
 	finalStep.Status = status
-	finalTrail := append(baseTrail, finalStep)
+	finalTrail := append(slices.Clone(baseTrail), finalStep)
 
 	updateReq := UpdateRequest{
 		SessionID: sessionID,

@@ -18,6 +18,7 @@ type Config struct {
 	DB          *gorm.DB
 	Logger      *zap.Logger
 	TablePrefix string
+	TableName   string
 
 	AccessResolver           AccessResolver
 	ConfigProvider           ConfigProvider
@@ -51,6 +52,9 @@ func New(cfg Config) (*Client, error) {
 
 	if cfg.TablePrefix != "" {
 		models.SetTablePrefix(cfg.TablePrefix)
+	}
+	if cfg.TableName != "" {
+		models.SetUserActivityTableName(cfg.TableName)
 	}
 
 	repo := repositories.NewUserActivityRepository(cfg.DB, logger)

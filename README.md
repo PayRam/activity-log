@@ -127,6 +127,7 @@ Dependency direction:
 - `DB *gorm.DB` (required): gorm database handle
 - `Logger *zap.Logger` (optional): defaults to production zap logger
 - `TablePrefix string` (optional): prefixes `user_activities` table name
+- `TableName string` (optional): overrides base table name (for example `activity_logs`)
 - `AccessResolver AccessResolver` (optional): applies `Get` access scoping
 - `ConfigProvider ConfigProvider` (optional): can override export limit (`user.activity.export.limit`)
 - `MemberResolver MemberResolver` (optional): hydrates `Activity.Member` in `Get`
@@ -583,10 +584,19 @@ if err := client.AutoMigrate(ctx); err != nil {
 
 Table name is `user_activities` unless you set `Config.TablePrefix`.
 
+If your app uses a different table name, set:
+
+- `Config.TableName` to override the base name (example: `activity_logs`)
+- `Config.TablePrefix` if needed (example: `core_`)
+
+Example result:
+
+- `TableName: "activity_logs"` => `activity_logs`
+- `TablePrefix: "core_", TableName: "activity_logs"` => `core_activity_logs`
+
 ## Testing
 
 ```bash
 go test ./...
 go test ./... -cover
 ```
-# activity-log

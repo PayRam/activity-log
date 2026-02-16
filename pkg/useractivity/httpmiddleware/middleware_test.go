@@ -230,6 +230,16 @@ func TestDefaultIPExtractor(t *testing.T) {
 	}
 }
 
+func TestDefaultIPExtractorSkipsEmptyForwardedForEntries(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-For", "   ,   ,")
+	req.Header.Set("X-Real-IP", "8.8.4.4")
+
+	if ip := DefaultIPExtractor(req); ip != "8.8.4.4" {
+		t.Fatalf("expected fallback to X-Real-IP, got %q", ip)
+	}
+}
+
 func TestMiddlewareAsync(t *testing.T) {
 	svc := &stubService{createCh: make(chan struct{}, 1), updateCh: make(chan struct{}, 1)}
 	client := newTestClient(t, svc)

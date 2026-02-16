@@ -118,8 +118,30 @@ func TestNewSetsTablePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got := models.GetTableName("user_activities"); got != "ua_user_activities" {
+	if got := models.GetTableName(models.DefaultUserActivityTableName); got != "ua_user_activities" {
 		t.Fatalf("expected table name ua_user_activities, got %q", got)
+	}
+}
+
+func TestNewSetsCustomTableName(t *testing.T) {
+	models.ResetTablePrefix()
+	t.Cleanup(models.ResetTablePrefix)
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open sqlite: %v", err)
+	}
+
+	_, err = New(Config{
+		DB:          db,
+		TablePrefix: "ua_",
+		TableName:   "activity_logs",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := models.GetTableName(models.DefaultUserActivityTableName); got != "ua_activity_logs" {
+		t.Fatalf("expected table name ua_activity_logs, got %q", got)
 	}
 }
 

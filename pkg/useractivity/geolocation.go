@@ -15,8 +15,8 @@ type LocationInfo struct {
 	Region      string
 	City        string
 	Timezone    string
-	Latitude    float64
-	Longitude   float64
+	Latitude    *float64
+	Longitude   *float64
 	Success     *bool
 	Status      string
 	Message     string
@@ -135,11 +135,11 @@ func EnrichCreateRequestWithLocation(req *CreateRequest, location *LocationInfo)
 	if req.Timezone == nil && location.Timezone != "" {
 		req.Timezone = stringPtr(location.Timezone)
 	}
-	if req.Latitude == nil && location.Latitude != 0 {
-		req.Latitude = float64Ptr(location.Latitude)
+	if req.Latitude == nil && location.Latitude != nil {
+		req.Latitude = float64Ptr(*location.Latitude)
 	}
-	if req.Longitude == nil && location.Longitude != 0 {
-		req.Longitude = float64Ptr(location.Longitude)
+	if req.Longitude == nil && location.Longitude != nil {
+		req.Longitude = float64Ptr(*location.Longitude)
 	}
 }
 
@@ -165,11 +165,11 @@ func EnrichUpdateRequestWithLocation(req *UpdateRequest, location *LocationInfo)
 	if req.Timezone == nil && location.Timezone != "" {
 		req.Timezone = stringPtr(location.Timezone)
 	}
-	if req.Latitude == nil && location.Latitude != 0 {
-		req.Latitude = float64Ptr(location.Latitude)
+	if req.Latitude == nil && location.Latitude != nil {
+		req.Latitude = float64Ptr(*location.Latitude)
 	}
-	if req.Longitude == nil && location.Longitude != 0 {
-		req.Longitude = float64Ptr(location.Longitude)
+	if req.Longitude == nil && location.Longitude != nil {
+		req.Longitude = float64Ptr(*location.Longitude)
 	}
 }
 
@@ -183,12 +183,16 @@ func toPublicLocation(location *internalutils.LocationInfo) *LocationInfo {
 		Region:      location.Region,
 		City:        location.City,
 		Timezone:    location.Timezone,
-		Latitude:    location.Latitude,
-		Longitude:   location.Longitude,
 		Status:      location.Status,
 		Message:     location.Message,
 		Error:       location.Error,
 		Reason:      location.Reason,
+	}
+	if location.HasLatitude {
+		out.Latitude = float64Ptr(location.Latitude)
+	}
+	if location.HasLongitude {
+		out.Longitude = float64Ptr(location.Longitude)
 	}
 	if location.Success != nil {
 		success := *location.Success

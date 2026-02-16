@@ -1,6 +1,7 @@
 package ginhandlers
 
 import (
+	"bytes"
 	"encoding/csv"
 	"net/http"
 	"strconv"
@@ -152,12 +153,8 @@ func (h *Handler) DownloadUserActivitiesCSV(c *gin.Context) {
 		return
 	}
 
-	filename := "user-activity-" + time.Now().UTC().Format("20060102-150405") + ".csv"
-	c.Header("Content-Type", "text/csv")
-	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
-
-	writer := csv.NewWriter(c.Writer)
-	defer writer.Flush()
+	var csvBuffer bytes.Buffer
+	writer := csv.NewWriter(&csvBuffer)
 
 	header := []string{
 		"id",
@@ -258,10 +255,16 @@ func (h *Handler) DownloadUserActivitiesCSV(c *gin.Context) {
 		}
 	}
 
+	writer.Flush()
 	if err := writer.Error(); err != nil {
 		h.handleError(c, err)
 		return
 	}
+
+	filename := "user-activity-" + time.Now().UTC().Format("20060102-150405") + ".csv"
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	c.Data(http.StatusOK, "text/csv", csvBuffer.Bytes())
 }
 
 // GetEventCategories handles GET /user-activity/event-categories.

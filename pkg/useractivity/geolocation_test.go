@@ -54,6 +54,12 @@ func TestGeoLookupLookupAndCache(t *testing.T) {
 	if first.Country != "United States" || first.City != "Mountain View" {
 		t.Fatalf("unexpected location payload: %+v", first)
 	}
+	if first.Latitude == nil || *first.Latitude != 37.3861 {
+		t.Fatalf("expected latitude to be present")
+	}
+	if first.Longitude == nil || *first.Longitude != -122.0839 {
+		t.Fatalf("expected longitude to be present")
+	}
 
 	second := lookup.Lookup("8.8.8.8")
 	if second == nil {
@@ -104,6 +110,30 @@ func TestGeoLookupFailurePayload(t *testing.T) {
 	}
 }
 
+func TestGeoLookupZeroCoordinatesPreserved(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return jsonResponse(`{"country":"Null Island","latitude":0,"longitude":0}`), nil
+		}),
+	}
+
+	lookup := NewGeoLookup(GeoLookupConfig{
+		ProviderURLTemplate: "https://geo.local/json/%s",
+		HTTPClient:          client,
+	})
+
+	location := lookup.Lookup("8.8.8.8")
+	if location == nil {
+		t.Fatalf("expected location")
+	}
+	if location.Latitude == nil || *location.Latitude != 0 {
+		t.Fatalf("expected latitude pointer with value 0")
+	}
+	if location.Longitude == nil || *location.Longitude != 0 {
+		t.Fatalf("expected longitude pointer with value 0")
+	}
+}
+
 func TestEnrichRequestWithLocation(t *testing.T) {
 	location := &LocationInfo{
 		Country:     "United States",
@@ -111,8 +141,8 @@ func TestEnrichRequestWithLocation(t *testing.T) {
 		Region:      "California",
 		City:        "Mountain View",
 		Timezone:    "America/Los_Angeles",
-		Latitude:    37.3861,
-		Longitude:   -122.0839,
+		Latitude:    float64Ptr(37.3861),
+		Longitude:   float64Ptr(-122.0839),
 	}
 
 	createReq := &CreateRequest{}
@@ -131,5 +161,30 @@ func TestEnrichRequestWithLocation(t *testing.T) {
 	}
 	if updateReq.Longitude == nil || *updateReq.Longitude != -122.0839 {
 		t.Fatalf("expected update request longitude")
+	}
+}
+
+func TestEnrichRequestWithZeroCoordinates(t *testing.T) {
+	location := &LocationInfo{
+		Latitude:  float64Ptr(0),
+		Longitude: float64Ptr(0),
+	}
+
+	createReq := &CreateRequest{}
+	EnrichCreateRequestWithLocation(createReq, location)
+	if createReq.Latitude == nil || *createReq.Latitude != 0 {
+		t.Fatalf("expected create request latitude 0 to be preserved")
+	}
+	if createReq.Longitude == nil || *createReq.Longitude != 0 {
+		t.Fatalf("expected create request longitude 0 to be preserved")
+	}
+
+	updateReq := &UpdateRequest{}
+	EnrichUpdateRequestWithLocation(updateReq, location)
+	if updateReq.Latitude == nil || *updateReq.Latitude != 0 {
+		t.Fatalf("expected update request latitude 0 to be preserved")
+	}
+	if updateReq.Longitude == nil || *updateReq.Longitude != 0 {
+		t.Fatalf("expected update request longitude 0 to be preserved")
 	}
 }
