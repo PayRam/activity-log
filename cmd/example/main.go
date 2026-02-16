@@ -3,17 +3,24 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"strconv"
+	"strings"
 
 	useractivity "github.com/PayRam/user-activity-go/pkg/useractivity"
 	"github.com/PayRam/user-activity-go/pkg/useractivity/ginmiddleware"
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
-	db, err := gorm.Open(sqlite.Open("useractivity.db"), &gorm.Config{})
+	dsn := strings.TrimSpace(os.Getenv("USER_ACTIVITY_POSTGRES_DSN"))
+	if dsn == "" {
+		log.Fatal("set USER_ACTIVITY_POSTGRES_DSN (for example: host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable)")
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
