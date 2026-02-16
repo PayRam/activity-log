@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/PayRam/user-activity-go/internal/models"
+	"github.com/PayRam/activity-log/internal/models"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

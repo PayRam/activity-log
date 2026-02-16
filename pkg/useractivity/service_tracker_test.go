@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/PayRam/user-activity-go/internal/models"
-	"github.com/PayRam/user-activity-go/internal/repositories"
+	"github.com/PayRam/activity-log/internal/models"
+	"github.com/PayRam/activity-log/internal/repositories"
 )
 
 type trackerStubService struct {

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PayRam/user-activity-go/internal/models"
-	"github.com/PayRam/user-activity-go/internal/repositories"
-	"github.com/PayRam/user-activity-go/internal/services"
-	internalutils "github.com/PayRam/user-activity-go/internal/utils"
+	"github.com/PayRam/activity-log/internal/models"
+	"github.com/PayRam/activity-log/internal/repositories"
+	"github.com/PayRam/activity-log/internal/services"
+	internalutils "github.com/PayRam/activity-log/internal/utils"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

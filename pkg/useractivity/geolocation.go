@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	internalutils "github.com/PayRam/user-activity-go/internal/utils"
+	internalutils "github.com/PayRam/activity-log/internal/utils"
 	"go.uber.org/zap"
 )
 

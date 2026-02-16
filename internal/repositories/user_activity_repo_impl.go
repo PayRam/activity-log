@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/PayRam/user-activity-go/internal/models"
+	"github.com/PayRam/activity-log/internal/models"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PayRam/user-activity-go/internal/models"
+	"github.com/PayRam/activity-log/internal/models"
 	"gorm.io/gorm"
 )
 

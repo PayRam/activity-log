@@ -3,7 +3,7 @@ package repositories
 import (
 	"context"
 
-	"github.com/PayRam/user-activity-go/internal/models"
+	"github.com/PayRam/activity-log/internal/models"
 )
 
 // UserActivityRepository defines storage operations for user activity.

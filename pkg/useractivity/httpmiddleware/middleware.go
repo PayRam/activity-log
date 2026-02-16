@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/PayRam/user-activity-go/internal/middleware"
-	"github.com/PayRam/user-activity-go/pkg/useractivity"
+	"github.com/PayRam/activity-log/internal/middleware"
+	"github.com/PayRam/activity-log/pkg/useractivity"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

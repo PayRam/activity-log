@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PayRam/user-activity-go/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/useractivity"
 	"github.com/gin-gonic/gin"
 )
 

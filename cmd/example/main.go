@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	useractivity "github.com/PayRam/user-activity-go/pkg/useractivity"
-	"github.com/PayRam/user-activity-go/pkg/useractivity/ginmiddleware"
+	useractivity "github.com/PayRam/activity-log/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/useractivity/ginmiddleware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

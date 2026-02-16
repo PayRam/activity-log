@@ -3,7 +3,7 @@ package utils
 import (
 	"sort"
 
-	"github.com/PayRam/user-activity-go/internal/models"
+	"github.com/PayRam/activity-log/internal/models"
 )
 
 // CollectMemberIDs returns a distinct member ID list.

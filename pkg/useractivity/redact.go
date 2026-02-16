@@ -1,6 +1,6 @@
 package useractivity
 
-import internalutils "github.com/PayRam/user-activity-go/internal/utils"
+import internalutils "github.com/PayRam/activity-log/internal/utils"
 
 // RedactDefaultJSONKeys redacts common sensitive keys in a JSON payload.
 // If payload is not valid JSON, it is returned unchanged.

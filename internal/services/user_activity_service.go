@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/PayRam/user-activity-go/internal/models"
-	"github.com/PayRam/user-activity-go/internal/repositories"
+	"github.com/PayRam/activity-log/internal/models"
+	"github.com/PayRam/activity-log/internal/repositories"
 )
 
 // UserActivityService provides activity persistence behavior.

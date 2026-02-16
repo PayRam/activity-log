@@ -14,10 +14,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/PayRam/user-activity-go/internal/models"
-	"github.com/PayRam/user-activity-go/internal/repositories"
-	"github.com/PayRam/user-activity-go/internal/services"
-	"github.com/PayRam/user-activity-go/pkg/useractivity"
+	"github.com/PayRam/activity-log/internal/models"
+	"github.com/PayRam/activity-log/internal/repositories"
+	"github.com/PayRam/activity-log/internal/services"
+	"github.com/PayRam/activity-log/pkg/useractivity"
 )
 
 type stubService struct {

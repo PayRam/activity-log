@@ -1,6 +1,6 @@
 package useractivity
 
-import internalutils "github.com/PayRam/user-activity-go/internal/utils"
+import internalutils "github.com/PayRam/activity-log/internal/utils"
 
 // MergeMetadata merges patch fields into existing metadata JSON.
 // If existing is non-JSON, it is preserved under "rawMetadata".
