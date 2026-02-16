@@ -10,19 +10,19 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// UserActivityRepositoryGorm implements UserActivityRepository using GORM.
-type UserActivityRepositoryGorm struct {
+// UserActivityRepositoryImpl implements UserActivityRepository using GORM.
+type UserActivityRepositoryImpl struct {
 	db     *gorm.DB
 	logger *zap.Logger
 }
 
 // NewUserActivityRepository creates a new GORM-backed repository.
-func NewUserActivityRepository(db *gorm.DB, logger *zap.Logger) *UserActivityRepositoryGorm {
-	return &UserActivityRepositoryGorm{db: db, logger: logger}
+func NewUserActivityRepository(db *gorm.DB, logger *zap.Logger) *UserActivityRepositoryImpl {
+	return &UserActivityRepositoryImpl{db: db, logger: logger}
 }
 
 // Create inserts a new activity record.
-func (r *UserActivityRepositoryGorm) Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (r *UserActivityRepositoryImpl) Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
 	if activity == nil {
 		return nil, fmt.Errorf("activity is nil")
 	}
@@ -36,7 +36,7 @@ func (r *UserActivityRepositoryGorm) Create(ctx context.Context, activity *model
 }
 
 // UpdateBySessionID updates an activity record by session ID with row locking.
-func (r *UserActivityRepositoryGorm) UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (r *UserActivityRepositoryImpl) UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
 	if activity == nil {
 		return nil, fmt.Errorf("activity is nil")
 	}
@@ -80,7 +80,7 @@ func (r *UserActivityRepositoryGorm) UpdateBySessionID(ctx context.Context, acti
 }
 
 // GetUserActivities retrieves activities with filtering and pagination.
-func (r *UserActivityRepositoryGorm) GetUserActivities(ctx context.Context, filter UserActivityFilters) ([]models.UserActivity, int64, error) {
+func (r *UserActivityRepositoryImpl) GetUserActivities(ctx context.Context, filter UserActivityFilters) ([]models.UserActivity, int64, error) {
 	var activities []models.UserActivity
 	var totalCount int64
 
@@ -110,7 +110,7 @@ func (r *UserActivityRepositoryGorm) GetUserActivities(ctx context.Context, filt
 }
 
 // GetEventCategories retrieves distinct event categories.
-func (r *UserActivityRepositoryGorm) GetEventCategories(ctx context.Context) ([]string, error) {
+func (r *UserActivityRepositoryImpl) GetEventCategories(ctx context.Context) ([]string, error) {
 	var categories []string
 
 	if err := r.db.WithContext(ctx).
