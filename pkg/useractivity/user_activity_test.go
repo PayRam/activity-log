@@ -308,6 +308,12 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 	if _, err := c.Get(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized error, got %v", err)
 	}
+
+	unknownFilter := "SOMETHING_ELSE"
+	req = GetRequest{ProjectFilter: &unknownFilter}
+	if _, err := c.Get(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("expected unauthorized error for unknown project filter, got %v", err)
+	}
 }
 
 func TestGetDateHandlingAndResolvers(t *testing.T) {

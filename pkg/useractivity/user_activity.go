@@ -355,6 +355,8 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 			}
 			req.ProjectFilter = nil
 			return nil
+		default:
+			return ErrUnauthorized
 		}
 	}
 
