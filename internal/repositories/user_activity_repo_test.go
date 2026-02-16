@@ -2,28 +2,39 @@ package repositories
 
 import (
 	"context"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/PayRam/user-activity-go/internal/models"
 	"go.uber.org/zap"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func newSQLiteDB(t *testing.T) *gorm.DB {
+func newPostgresDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	dsn := strings.TrimSpace(os.Getenv("USER_ACTIVITY_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set USER_ACTIVITY_TEST_POSTGRES_DSN to run postgres repository tests")
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("failed to open sqlite: %v", err)
+		t.Fatalf("failed to open postgres: %v", err)
 	}
 	if err := db.AutoMigrate(&models.UserActivity{}); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
+	}
+	tableName := models.GetTableName(models.DefaultUserActivityTableName)
+	if err := db.Exec("TRUNCATE TABLE " + tableName + " RESTART IDENTITY").Error; err != nil {
+		t.Fatalf("failed to truncate table: %v", err)
 	}
 	return db
 }
 
 func TestUserActivityRepositoryCreate(t *testing.T) {
-	db := newSQLiteDB(t)
+	db := newPostgresDB(t)
 	repo := NewUserActivityRepository(db, zap.NewNop())
 
 	if _, err := repo.Create(context.Background(), nil); err == nil {
@@ -47,7 +58,7 @@ func TestUserActivityRepositoryCreate(t *testing.T) {
 }
 
 func TestUserActivityRepositoryListAndCategories(t *testing.T) {
-	db := newSQLiteDB(t)
+	db := newPostgresDB(t)
 	repo := NewUserActivityRepository(db, zap.NewNop())
 
 	records := []models.UserActivity{
@@ -83,7 +94,7 @@ func TestUserActivityRepositoryListAndCategories(t *testing.T) {
 }
 
 func TestUserActivityRepositoryUpdateValidation(t *testing.T) {
-	db := newSQLiteDB(t)
+	db := newPostgresDB(t)
 	repo := NewUserActivityRepository(db, zap.NewNop())
 
 	if _, err := repo.UpdateBySessionID(context.Background(), nil); err == nil {
@@ -97,7 +108,7 @@ func TestUserActivityRepositoryUpdateValidation(t *testing.T) {
 }
 
 func TestUserActivityRepositoryUpdateDryRun(t *testing.T) {
-	db := newSQLiteDB(t).Session(&gorm.Session{DryRun: true})
+	db := newPostgresDB(t).Session(&gorm.Session{DryRun: true})
 	repo := NewUserActivityRepository(db, zap.NewNop())
 
 	activity := &models.UserActivity{

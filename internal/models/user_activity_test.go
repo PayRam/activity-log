@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -48,6 +49,13 @@ func TestUintSliceScanValue(t *testing.T) {
 		t.Fatalf("unexpected scan result: %v", s)
 	}
 
+	if err := s.Scan(string(encoded)); err != nil {
+		t.Fatalf("unexpected error on Scan(string): %v", err)
+	}
+	if len(s) != len(raw) || s[1] != 2 {
+		t.Fatalf("unexpected scan result from string input: %v", s)
+	}
+
 	if _, err := (UintSlice(nil)).Value(); err != nil {
 		t.Fatalf("unexpected error on Value(nil): %v", err)
 	}
@@ -61,6 +69,12 @@ func TestUintSliceScanValue(t *testing.T) {
 	}
 
 	if err := s.Scan("invalid"); err == nil {
-		t.Fatalf("expected error on Scan with invalid type")
+		t.Fatalf("expected error on Scan with invalid JSON string")
+	}
+
+	if err := s.Scan(123); err == nil {
+		t.Fatalf("expected error on Scan with unsupported type")
+	} else if !strings.Contains(err.Error(), "UintSlice.Scan") {
+		t.Fatalf("expected error to mention UintSlice.Scan, got %v", err)
 	}
 }

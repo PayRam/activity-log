@@ -3,12 +3,14 @@ package useractivity
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/PayRam/user-activity-go/internal/models"
 	"github.com/PayRam/user-activity-go/internal/repositories"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -92,6 +94,39 @@ type stubPlatformResolver struct {
 	err  error
 }
 
+func newDryRunPostgresDB(t *testing.T) *gorm.DB {
+	t.Helper()
+
+	db, err := gorm.Open(
+		postgres.Open("host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"),
+		&gorm.Config{
+			DryRun:               true,
+			DisableAutomaticPing: true,
+		},
+	)
+	if err != nil {
+		t.Fatalf("failed to open postgres in dry-run mode: %v", err)
+	}
+
+	return db
+}
+
+func newPostgresDB(t *testing.T) *gorm.DB {
+	t.Helper()
+
+	dsn := strings.TrimSpace(os.Getenv("USER_ACTIVITY_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set USER_ACTIVITY_TEST_POSTGRES_DSN to run postgres migration tests")
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open postgres: %v", err)
+	}
+
+	return db
+}
+
 func (r *stubPlatformResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]ExternalPlatformInfo, error) {
 	if r.err != nil {
 		return nil, r.err
@@ -109,12 +144,9 @@ func TestNewSetsTablePrefix(t *testing.T) {
 	models.ResetTablePrefix()
 	t.Cleanup(models.ResetTablePrefix)
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open sqlite: %v", err)
-	}
+	db := newDryRunPostgresDB(t)
 
-	_, err = New(Config{DB: db, TablePrefix: "ua_"})
+	_, err := New(Config{DB: db, TablePrefix: "ua_"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,12 +159,9 @@ func TestNewSetsCustomTableName(t *testing.T) {
 	models.ResetTablePrefix()
 	t.Cleanup(models.ResetTablePrefix)
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open sqlite: %v", err)
-	}
+	db := newDryRunPostgresDB(t)
 
-	_, err = New(Config{
+	_, err := New(Config{
 		DB:          db,
 		TablePrefix: "ua_",
 		TableName:   "activity_logs",
@@ -151,10 +180,7 @@ func TestAutoMigrate(t *testing.T) {
 		t.Fatalf("expected error for nil client")
 	}
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open sqlite: %v", err)
-	}
+	db := newPostgresDB(t)
 	c, err := New(Config{DB: db})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

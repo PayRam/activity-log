@@ -59,11 +59,21 @@ func (u *UintSlice) Scan(value interface{}) error {
 		*u = nil
 		return nil
 	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return fmt.Errorf("failed to unmarshal UintSlice value: %v", value)
+
+	var bytes []byte
+	switch v := value.(type) {
+	case []byte:
+		bytes = v
+	case string:
+		bytes = []byte(v)
+	default:
+		return fmt.Errorf("UintSlice.Scan: unsupported value type %T", value)
 	}
-	return json.Unmarshal(bytes, u)
+
+	if err := json.Unmarshal(bytes, u); err != nil {
+		return fmt.Errorf("UintSlice.Scan: failed to unmarshal value: %w", err)
+	}
+	return nil
 }
 
 // Value implements driver.Valuer for writing to database.

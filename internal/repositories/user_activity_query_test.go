@@ -6,17 +6,23 @@ import (
 	"time"
 
 	"github.com/PayRam/user-activity-go/internal/models"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func newDryRunDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	db, err := gorm.Open(
+		postgres.Open("host=localhost user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"),
+		&gorm.Config{
+			DryRun:               true,
+			DisableAutomaticPing: true,
+		},
+	)
 	if err != nil {
-		t.Fatalf("failed to open sqlite: %v", err)
+		t.Fatalf("failed to open postgres in dry-run mode: %v", err)
 	}
-	return db.Session(&gorm.Session{DryRun: true})
+	return db
 }
 
 func buildSQL(t *testing.T, query *gorm.DB) string {
@@ -54,7 +60,7 @@ func TestApplyUserActivityGetFilters_Basic(t *testing.T) {
 		"IN", "method", "member_id", "api_status", "event_name", "event_category",
 		"status_code", "session_id", "ip_address", "country", "role",
 		"SELECT id FROM members",
-		"external_platform_ids::jsonb @> ?::jsonb",
+		"external_platform_ids::jsonb @>",
 	}
 	for _, part := range expected {
 		if !strings.Contains(sql, part) {
