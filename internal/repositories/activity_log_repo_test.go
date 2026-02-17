@@ -14,34 +14,34 @@ import (
 
 func newPostgresDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	dsn := strings.TrimSpace(os.Getenv("USER_ACTIVITY_TEST_POSTGRES_DSN"))
+	dsn := strings.TrimSpace(os.Getenv("ACTIVITY_LOG_TEST_POSTGRES_DSN"))
 	if dsn == "" {
-		t.Skip("set USER_ACTIVITY_TEST_POSTGRES_DSN to run postgres repository tests")
+		t.Skip("set ACTIVITY_LOG_TEST_POSTGRES_DSN to run postgres repository tests")
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to open postgres: %v", err)
 	}
-	if err := db.AutoMigrate(&models.UserActivity{}); err != nil {
+	if err := db.AutoMigrate(&models.ActivityLog{}); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
-	tableName := models.GetTableName(models.DefaultUserActivityTableName)
+	tableName := models.GetTableName(models.DefaultActivityLogTableName)
 	if err := db.Exec("TRUNCATE TABLE " + tableName + " RESTART IDENTITY").Error; err != nil {
 		t.Fatalf("failed to truncate table: %v", err)
 	}
 	return db
 }
 
-func TestUserActivityRepositoryCreate(t *testing.T) {
+func TestActivityLogRepositoryCreate(t *testing.T) {
 	db := newPostgresDB(t)
-	repo := NewUserActivityRepository(db, zap.NewNop())
+	repo := NewActivityLogRepository(db, zap.NewNop())
 
 	if _, err := repo.Create(context.Background(), nil); err == nil {
 		t.Fatalf("expected error for nil activity")
 	}
 
-	activity := &models.UserActivity{
+	activity := &models.ActivityLog{
 		SessionID: "sess-1",
 		Method:    "GET",
 		APIPart:   "/ping",
@@ -57,11 +57,11 @@ func TestUserActivityRepositoryCreate(t *testing.T) {
 	}
 }
 
-func TestUserActivityRepositoryListAndCategories(t *testing.T) {
+func TestActivityLogRepositoryListAndCategories(t *testing.T) {
 	db := newPostgresDB(t)
-	repo := NewUserActivityRepository(db, zap.NewNop())
+	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	records := []models.UserActivity{
+	records := []models.ActivityLog{
 		{SessionID: "s1", Method: "GET", APIPart: "/a", APIStatus: "SUCCESS", APIAction: "READ", EventCategory: strPtr("AUTH")},
 		{SessionID: "s2", Method: "POST", APIPart: "/b", APIStatus: "SUCCESS", APIAction: "WRITE", EventCategory: strPtr("PAYMENT")},
 		{SessionID: "s3", Method: "GET", APIPart: "/c", APIStatus: "SUCCESS", APIAction: "READ", EventCategory: strPtr("AUTH")},
@@ -72,8 +72,8 @@ func TestUserActivityRepositoryListAndCategories(t *testing.T) {
 		}
 	}
 
-	filter := UserActivityFilters{Methods: []string{"GET"}}
-	list, total, err := repo.GetUserActivities(context.Background(), filter)
+	filter := ActivityLogFilters{Methods: []string{"GET"}}
+	list, total, err := repo.GetActivityLogs(context.Background(), filter)
 	if err != nil {
 		t.Fatalf("list error: %v", err)
 	}
@@ -93,25 +93,25 @@ func TestUserActivityRepositoryListAndCategories(t *testing.T) {
 	}
 }
 
-func TestUserActivityRepositoryUpdateValidation(t *testing.T) {
+func TestActivityLogRepositoryUpdateValidation(t *testing.T) {
 	db := newPostgresDB(t)
-	repo := NewUserActivityRepository(db, zap.NewNop())
+	repo := NewActivityLogRepository(db, zap.NewNop())
 
 	if _, err := repo.UpdateBySessionID(context.Background(), nil); err == nil {
 		t.Fatalf("expected error for nil activity")
 	}
 
-	activity := &models.UserActivity{}
+	activity := &models.ActivityLog{}
 	if _, err := repo.UpdateBySessionID(context.Background(), activity); err == nil {
 		t.Fatalf("expected error for empty session_id")
 	}
 }
 
-func TestUserActivityRepositoryUpdateDryRun(t *testing.T) {
+func TestActivityLogRepositoryUpdateDryRun(t *testing.T) {
 	db := newPostgresDB(t).Session(&gorm.Session{DryRun: true})
-	repo := NewUserActivityRepository(db, zap.NewNop())
+	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	activity := &models.UserActivity{
+	activity := &models.ActivityLog{
 		SessionID: "sess-1",
 		APIStatus: "SUCCESS",
 		APIAction: "READ",

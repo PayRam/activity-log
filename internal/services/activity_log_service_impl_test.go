@@ -21,12 +21,12 @@ type fakeRepo struct {
 	listErr   error
 	catErr    error
 
-	listItems []models.UserActivity
+	listItems []models.ActivityLog
 	total     int64
 	cats      []string
 }
 
-func (f *fakeRepo) Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (f *fakeRepo) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	f.createCalled = true
 	if f.createErr != nil {
 		return nil, f.createErr
@@ -34,7 +34,7 @@ func (f *fakeRepo) Create(ctx context.Context, activity *models.UserActivity) (*
 	return activity, nil
 }
 
-func (f *fakeRepo) UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (f *fakeRepo) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	f.updateCalled = true
 	if f.updateErr != nil {
 		return nil, f.updateErr
@@ -42,7 +42,7 @@ func (f *fakeRepo) UpdateBySessionID(ctx context.Context, activity *models.UserA
 	return activity, nil
 }
 
-func (f *fakeRepo) GetUserActivities(ctx context.Context, filter repositories.UserActivityFilters) ([]models.UserActivity, int64, error) {
+func (f *fakeRepo) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	f.listCalled = true
 	if f.listErr != nil {
 		return nil, 0, f.listErr
@@ -58,9 +58,9 @@ func (f *fakeRepo) GetEventCategories(ctx context.Context) ([]string, error) {
 	return f.cats, nil
 }
 
-func TestUserActivityServiceValidation(t *testing.T) {
+func TestActivityLogServiceValidation(t *testing.T) {
 	repo := &fakeRepo{}
-	svc := NewUserActivityServiceImpl(repo, zap.NewNop())
+	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
 	if _, err := svc.Create(context.Background(), nil); err == nil {
 		t.Fatalf("expected error for nil activity")
@@ -70,15 +70,15 @@ func TestUserActivityServiceValidation(t *testing.T) {
 	}
 }
 
-func TestUserActivityServicePassThrough(t *testing.T) {
+func TestActivityLogServicePassThrough(t *testing.T) {
 	repo := &fakeRepo{
-		listItems: []models.UserActivity{{SessionID: "s1"}},
+		listItems: []models.ActivityLog{{SessionID: "s1"}},
 		total:     1,
 		cats:      []string{"AUTH"},
 	}
-	svc := NewUserActivityServiceImpl(repo, zap.NewNop())
+	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
-	act := &models.UserActivity{SessionID: "s1"}
+	act := &models.ActivityLog{SessionID: "s1"}
 	if _, err := svc.Create(context.Background(), act); err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestUserActivityServicePassThrough(t *testing.T) {
 		t.Fatalf("expected update to be called")
 	}
 
-	activities, total, err := svc.Get(context.Background(), repositories.UserActivityFilters{})
+	activities, total, err := svc.Get(context.Background(), repositories.ActivityLogFilters{})
 	if err != nil {
 		t.Fatalf("unexpected activities error: %v", err)
 	}
@@ -110,22 +110,22 @@ func TestUserActivityServicePassThrough(t *testing.T) {
 	}
 }
 
-func TestUserActivityServiceErrors(t *testing.T) {
+func TestActivityLogServiceErrors(t *testing.T) {
 	repo := &fakeRepo{
 		createErr: errors.New("create"),
 		updateErr: errors.New("update"),
 		listErr:   errors.New("list"),
 		catErr:    errors.New("cat"),
 	}
-	svc := NewUserActivityServiceImpl(repo, zap.NewNop())
+	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
-	if _, err := svc.Create(context.Background(), &models.UserActivity{}); err == nil {
+	if _, err := svc.Create(context.Background(), &models.ActivityLog{}); err == nil {
 		t.Fatalf("expected create error")
 	}
-	if _, err := svc.UpdateBySessionID(context.Background(), &models.UserActivity{}); err == nil {
+	if _, err := svc.UpdateBySessionID(context.Background(), &models.ActivityLog{}); err == nil {
 		t.Fatalf("expected update error")
 	}
-	if _, _, err := svc.Get(context.Background(), repositories.UserActivityFilters{}); err == nil {
+	if _, _, err := svc.Get(context.Background(), repositories.ActivityLogFilters{}); err == nil {
 		t.Fatalf("expected list error")
 	}
 	if _, err := svc.GetEventCategories(context.Background()); err == nil {

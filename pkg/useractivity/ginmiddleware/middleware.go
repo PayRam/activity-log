@@ -51,7 +51,7 @@ type Config struct {
 	OnError func(error)
 }
 
-// Middleware returns a Gin middleware that logs user activity.
+// Middleware returns a Gin middleware that logs activity log.
 func Middleware(cfg Config) gin.HandlerFunc {
 	if cfg.Client == nil {
 		return func(c *gin.Context) { c.Next() }

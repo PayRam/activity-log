@@ -6,23 +6,23 @@ import (
 	"testing"
 )
 
-func TestUserActivityTableName(t *testing.T) {
+func TestActivityLogTableName(t *testing.T) {
 	ResetTablePrefix()
 	t.Cleanup(ResetTablePrefix)
 
 	SetTablePrefix("core_")
-	if got := (UserActivity{}).TableName(); got != "core_user_activities" {
-		t.Fatalf("expected table name core_user_activities, got %q", got)
+	if got := (ActivityLog{}).TableName(); got != "core_activity_logs" {
+		t.Fatalf("expected table name core_activity_logs, got %q", got)
 	}
 }
 
-func TestUserActivityCustomTableName(t *testing.T) {
+func TestActivityLogCustomTableName(t *testing.T) {
 	ResetTablePrefix()
 	t.Cleanup(ResetTablePrefix)
 
 	SetTablePrefix("core_")
-	SetUserActivityTableName("activity_logs")
-	if got := (UserActivity{}).TableName(); got != "core_activity_logs" {
+	SetActivityLogTableName("activity_logs")
+	if got := (ActivityLog{}).TableName(); got != "core_activity_logs" {
 		t.Fatalf("expected table name core_activity_logs, got %q", got)
 	}
 }

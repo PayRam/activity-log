@@ -15,16 +15,16 @@ import (
 )
 
 type stubService struct {
-	createFn     func(*models.UserActivity) (*models.UserActivity, error)
-	updateFn     func(*models.UserActivity) (*models.UserActivity, error)
-	getFn        func(repositories.UserActivityFilters) ([]models.UserActivity, int64, error)
+	createFn     func(*models.ActivityLog) (*models.ActivityLog, error)
+	updateFn     func(*models.ActivityLog) (*models.ActivityLog, error)
+	getFn        func(repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error)
 	categoriesFn func() ([]string, error)
-	lastFilter   repositories.UserActivityFilters
-	lastCreate   *models.UserActivity
-	lastUpdate   *models.UserActivity
+	lastFilter   repositories.ActivityLogFilters
+	lastCreate   *models.ActivityLog
+	lastUpdate   *models.ActivityLog
 }
 
-func (s *stubService) Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (s *stubService) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.lastCreate = activity
 	if s.createFn != nil {
 		return s.createFn(activity)
@@ -32,7 +32,7 @@ func (s *stubService) Create(ctx context.Context, activity *models.UserActivity)
 	return activity, nil
 }
 
-func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.lastUpdate = activity
 	if s.updateFn != nil {
 		return s.updateFn(activity)
@@ -40,7 +40,7 @@ func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.Us
 	return activity, nil
 }
 
-func (s *stubService) Get(ctx context.Context, filter repositories.UserActivityFilters) ([]models.UserActivity, int64, error) {
+func (s *stubService) Get(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	s.lastFilter = filter
 	if s.getFn != nil {
 		return s.getFn(filter)
@@ -114,9 +114,9 @@ func newDryRunPostgresDB(t *testing.T) *gorm.DB {
 func newPostgresDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
-	dsn := strings.TrimSpace(os.Getenv("USER_ACTIVITY_TEST_POSTGRES_DSN"))
+	dsn := strings.TrimSpace(os.Getenv("ACTIVITY_LOG_TEST_POSTGRES_DSN"))
 	if dsn == "" {
-		t.Skip("set USER_ACTIVITY_TEST_POSTGRES_DSN to run postgres migration tests")
+		t.Skip("set ACTIVITY_LOG_TEST_POSTGRES_DSN to run postgres migration tests")
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -150,8 +150,8 @@ func TestNewSetsTablePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got := models.GetTableName(models.DefaultUserActivityTableName); got != "ua_user_activities" {
-		t.Fatalf("expected table name ua_user_activities, got %q", got)
+	if got := models.GetTableName(models.DefaultActivityLogTableName); got != "ua_activity_logs" {
+		t.Fatalf("expected table name ua_activity_logs, got %q", got)
 	}
 }
 
@@ -169,7 +169,7 @@ func TestNewSetsCustomTableName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got := models.GetTableName(models.DefaultUserActivityTableName); got != "ua_activity_logs" {
+	if got := models.GetTableName(models.DefaultActivityLogTableName); got != "ua_activity_logs" {
 		t.Fatalf("expected table name ua_activity_logs, got %q", got)
 	}
 }
@@ -217,7 +217,7 @@ func TestCreateValidation(t *testing.T) {
 
 func TestCreateMapping(t *testing.T) {
 	stub := &stubService{
-		createFn: func(activity *models.UserActivity) (*models.UserActivity, error) {
+		createFn: func(activity *models.ActivityLog) (*models.ActivityLog, error) {
 			activity.ID = 99
 			return activity, nil
 		},
@@ -354,7 +354,7 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 	}
 
 	stub := &stubService{
-		updateFn: func(activity *models.UserActivity) (*models.UserActivity, error) {
+		updateFn: func(activity *models.ActivityLog) (*models.ActivityLog, error) {
 			return activity, nil
 		},
 	}
@@ -382,7 +382,7 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 
 func TestUpdateDescriptionFallbackFromEventInfo(t *testing.T) {
 	stub := &stubService{
-		updateFn: func(activity *models.UserActivity) (*models.UserActivity, error) {
+		updateFn: func(activity *models.ActivityLog) (*models.ActivityLog, error) {
 			return activity, nil
 		},
 	}
@@ -420,7 +420,7 @@ func TestUpdateDescriptionFallbackFromEventInfo(t *testing.T) {
 
 func TestGetAccessScopeAndExportLimit(t *testing.T) {
 	stub := &stubService{
-		getFn: func(filter repositories.UserActivityFilters) ([]models.UserActivity, int64, error) {
+		getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 			return nil, 0, nil
 		},
 	}
@@ -468,8 +468,8 @@ func TestGetDateHandlingAndResolvers(t *testing.T) {
 	future := time.Now().Add(time.Hour)
 
 	stub := &stubService{
-		getFn: func(filter repositories.UserActivityFilters) ([]models.UserActivity, int64, error) {
-			return []models.UserActivity{
+		getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+			return []models.ActivityLog{
 				{
 					BaseModel:           models.BaseModel{ID: 1},
 					SessionID:           "s1",
@@ -504,8 +504,8 @@ func TestGetDateHandlingAndResolvers(t *testing.T) {
 
 func TestGetResolverErrors(t *testing.T) {
 	stub := &stubService{
-		getFn: func(filter repositories.UserActivityFilters) ([]models.UserActivity, int64, error) {
-			return []models.UserActivity{{MemberID: uintPtr(1)}}, 1, nil
+		getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+			return []models.ActivityLog{{MemberID: uintPtr(1)}}, 1, nil
 		},
 	}
 	c := &Client{

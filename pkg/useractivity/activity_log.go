@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Config configures the user activity client.
+// Config configures the activity log client.
 type Config struct {
 	DB               *gorm.DB
 	Logger           *zap.Logger
@@ -28,10 +28,10 @@ type Config struct {
 	ExternalPlatformResolver ExternalPlatformResolver
 }
 
-// Client provides Create/Update APIs for user activity records.
+// Client provides Create/Update APIs for activity log records.
 type Client struct {
 	db               *gorm.DB
-	svc              services.UserActivityService
+	svc              services.ActivityLogService
 	logger           *zap.Logger
 	eventDeriver     EventDeriver
 	eventInfoDeriver EventInfoDeriver
@@ -42,7 +42,7 @@ type Client struct {
 	externalPlatformResolver ExternalPlatformResolver
 }
 
-// New creates a new user activity client.
+// New creates a new activity log client.
 func New(cfg Config) (*Client, error) {
 	if cfg.DB == nil {
 		return nil, fmt.Errorf("db is required")
@@ -58,11 +58,11 @@ func New(cfg Config) (*Client, error) {
 		models.SetTablePrefix(cfg.TablePrefix)
 	}
 	if cfg.TableName != "" {
-		models.SetUserActivityTableName(cfg.TableName)
+		models.SetActivityLogTableName(cfg.TableName)
 	}
 
-	repo := repositories.NewUserActivityRepository(cfg.DB, logger)
-	svc := services.NewUserActivityServiceImpl(repo, logger)
+	repo := repositories.NewActivityLogRepository(cfg.DB, logger)
+	svc := services.NewActivityLogServiceImpl(repo, logger)
 
 	return &Client{
 		db:                       cfg.DB,
@@ -77,7 +77,7 @@ func New(cfg Config) (*Client, error) {
 	}, nil
 }
 
-// AutoMigrate creates or updates the user_activities table schema.
+// AutoMigrate creates or updates the activity_logs table schema.
 func (c *Client) AutoMigrate(ctx context.Context) error {
 	if c == nil || c.db == nil {
 		return fmt.Errorf("client is not initialized")
@@ -85,10 +85,10 @@ func (c *Client) AutoMigrate(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return c.db.WithContext(ctx).AutoMigrate(&models.UserActivity{})
+	return c.db.WithContext(ctx).AutoMigrate(&models.ActivityLog{})
 }
 
-// Create inserts a new user activity record.
+// Create inserts a new activity log record.
 func (c *Client) Create(ctx context.Context, req CreateRequest) (*Activity, error) {
 	if c == nil || c.svc == nil {
 		return nil, fmt.Errorf("client is not initialized")
@@ -111,7 +111,7 @@ func (c *Client) Create(ctx context.Context, req CreateRequest) (*Activity, erro
 
 	applyEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
-	activity := &models.UserActivity{
+	activity := &models.ActivityLog{
 		MemberID:            req.MemberID,
 		SessionID:           req.SessionID,
 		ExternalPlatformIDs: models.UintSlice(req.ExternalPlatformIDs),
@@ -158,7 +158,7 @@ func (c *Client) Update(ctx context.Context, req UpdateRequest) (*Activity, erro
 
 	applyUpdateEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
-	activity := &models.UserActivity{
+	activity := &models.ActivityLog{
 		SessionID:     req.SessionID,
 		MemberID:      req.MemberID,
 		StatusCode:    req.StatusCode,
@@ -205,7 +205,7 @@ func (c *Client) Update(ctx context.Context, req UpdateRequest) (*Activity, erro
 	return toActivity(updated), nil
 }
 
-// Get retrieves user activities with filtering and access controls.
+// Get retrieves activity logs with filtering and access controls.
 func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetResponse, error) {
 	if c == nil || c.svc == nil {
 		return GetResponse{}, fmt.Errorf("client is not initialized")
@@ -225,7 +225,7 @@ func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetRes
 		}
 	}
 
-	filter := repositories.UserActivityFilters{
+	filter := repositories.ActivityLogFilters{
 		IDS:                 req.IDS,
 		APIStatuses:         req.APIStatuses,
 		Methods:             req.Methods,
@@ -257,7 +257,7 @@ func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetRes
 	limit := DefaultGetLimit
 	if req.Export {
 		if c.configProvider != nil {
-			if exportLimit, ok, err := c.configProvider.GetInt(ctx, ConfigKeyUserActivityExportLimit); err == nil && ok && exportLimit > 0 {
+			if exportLimit, ok, err := c.configProvider.GetInt(ctx, ConfigKeyActivityLogExportLimit); err == nil && ok && exportLimit > 0 {
 				limit = exportLimit
 			}
 		}
@@ -378,7 +378,7 @@ func (c *Client) GetEventCategories(ctx context.Context) ([]string, error) {
 	return c.svc.GetEventCategories(ctx)
 }
 
-func toActivity(model *models.UserActivity) *Activity {
+func toActivity(model *models.ActivityLog) *Activity {
 	if model == nil {
 		return nil
 	}
@@ -461,7 +461,7 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 	return nil
 }
 
-func (c *Client) mapActivities(ctx context.Context, modelsList []models.UserActivity, total int64) (GetResponse, error) {
+func (c *Client) mapActivities(ctx context.Context, modelsList []models.ActivityLog, total int64) (GetResponse, error) {
 	activities := make([]Activity, 0, len(modelsList))
 
 	memberIDs := internalutils.CollectMemberIDs(modelsList)

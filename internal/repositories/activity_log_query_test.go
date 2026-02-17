@@ -27,16 +27,16 @@ func newDryRunDB(t *testing.T) *gorm.DB {
 
 func buildSQL(t *testing.T, query *gorm.DB) string {
 	t.Helper()
-	var activities []models.UserActivity
+	var activities []models.ActivityLog
 	stmt := query.Find(&activities).Statement
 	return stmt.SQL.String()
 }
 
-func TestApplyUserActivityGetFilters_Basic(t *testing.T) {
+func TestApplyActivityLogGetFilters_Basic(t *testing.T) {
 	db := newDryRunDB(t)
 	session := "sess"
 	search := "term"
-	filter := UserActivityFilters{
+	filter := ActivityLogFilters{
 		IDS:                 []uint{1, 2},
 		Methods:             []string{"GET"},
 		MemberIDs:           []uint{10},
@@ -52,7 +52,7 @@ func TestApplyUserActivityGetFilters_Basic(t *testing.T) {
 		ExternalPlatformIDs: []uint{7},
 	}
 
-	query := ApplyUserActivityGetFilters(db.Model(&models.UserActivity{}), filter)
+	query := ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
 	sql := buildSQL(t, query)
 
 	expected := []string{
@@ -68,27 +68,27 @@ func TestApplyUserActivityGetFilters_Basic(t *testing.T) {
 	}
 }
 
-func TestApplyUserActivityGetFilters_ProjectFilter(t *testing.T) {
+func TestApplyActivityLogGetFilters_ProjectFilter(t *testing.T) {
 	db := newDryRunDB(t)
 	projectFilter := "NO_IDS"
-	filter := UserActivityFilters{ProjectFilter: &projectFilter}
+	filter := ActivityLogFilters{ProjectFilter: &projectFilter}
 
-	query := ApplyUserActivityGetFilters(db.Model(&models.UserActivity{}), filter)
+	query := ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
 	sql := buildSQL(t, query)
 	if !strings.Contains(sql, "external_platform_ids IS NULL") {
 		t.Fatalf("expected SQL to contain NO_IDS condition, got: %s", sql)
 	}
 
 	projectFilter = "ALL"
-	filter = UserActivityFilters{ProjectFilter: &projectFilter}
-	query = ApplyUserActivityGetFilters(db.Model(&models.UserActivity{}), filter)
+	filter = ActivityLogFilters{ProjectFilter: &projectFilter}
+	query = ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
 	sql = buildSQL(t, query)
 	if !strings.Contains(sql, "external_platform_ids IS NOT NULL") {
 		t.Fatalf("expected SQL to contain ALL condition, got: %s", sql)
 	}
 }
 
-func TestApplyUserActivitiesPaginationConditions(t *testing.T) {
+func TestApplyActivityLogsPaginationConditions(t *testing.T) {
 	db := newDryRunDB(t)
 	limit := 10
 	offset := 5
@@ -98,7 +98,7 @@ func TestApplyUserActivitiesPaginationConditions(t *testing.T) {
 	lt := uint(20)
 	createdAfter := time.Now().Add(-time.Hour)
 
-	filter := UserActivityFilters{
+	filter := ActivityLogFilters{
 		Limit:         &limit,
 		Offset:        &offset,
 		SortBy:        &sortBy,
@@ -108,7 +108,7 @@ func TestApplyUserActivitiesPaginationConditions(t *testing.T) {
 		CreatedAfter:  &createdAfter,
 	}
 
-	query := ApplyUserActivitiesPaginationConditions(db.Model(&models.UserActivity{}), filter)
+	query := ApplyActivityLogsPaginationConditions(db.Model(&models.ActivityLog{}), filter)
 	sql := buildSQL(t, query)
 	if !strings.Contains(sql, "ORDER BY created_at ASC") {
 		t.Fatalf("expected ORDER BY created_at ASC, got: %s", sql)
@@ -119,7 +119,7 @@ func TestApplyUserActivitiesPaginationConditions(t *testing.T) {
 
 	invalidSort := "bad_column"
 	filter.SortBy = &invalidSort
-	query = ApplyUserActivitiesPaginationConditions(db.Model(&models.UserActivity{}), filter)
+	query = ApplyActivityLogsPaginationConditions(db.Model(&models.ActivityLog{}), filter)
 	sql = buildSQL(t, query)
 	if !strings.Contains(sql, "ORDER BY id ASC") {
 		t.Fatalf("expected ORDER BY id ASC for invalid column, got: %s", sql)

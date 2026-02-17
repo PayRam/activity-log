@@ -8,8 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserActivityFilters defines filter options for listing activities.
-type UserActivityFilters struct {
+// ActivityLogFilters defines filter options for listing activities.
+type ActivityLogFilters struct {
 	SessionID           *string
 	Search              *string
 	StatusCodes         []int
@@ -39,7 +39,7 @@ type UserActivityFilters struct {
 	EndDate       *time.Time
 }
 
-var allowedUserActivitySortColumns = map[string]bool{
+var allowedActivityLogSortColumns = map[string]bool{
 	"id":             true,
 	"created_at":     true,
 	"updated_at":     true,
@@ -55,8 +55,8 @@ var allowedUserActivitySortColumns = map[string]bool{
 	"city":           true,
 }
 
-func ApplyUserActivityGetFilters(query *gorm.DB, filter UserActivityFilters) *gorm.DB {
-	tableName := models.GetTableName(models.DefaultUserActivityTableName)
+func ApplyActivityLogGetFilters(query *gorm.DB, filter ActivityLogFilters) *gorm.DB {
+	tableName := models.GetTableName(models.DefaultActivityLogTableName)
 
 	if len(filter.IDS) > 0 {
 		query = query.Where(fmt.Sprintf("%s.id IN ?", tableName), filter.IDS)
@@ -140,7 +140,7 @@ func ApplyUserActivityGetFilters(query *gorm.DB, filter UserActivityFilters) *go
 	return query
 }
 
-func ApplyUserActivitiesPaginationConditions(query *gorm.DB, filter UserActivityFilters) *gorm.DB {
+func ApplyActivityLogsPaginationConditions(query *gorm.DB, filter ActivityLogFilters) *gorm.DB {
 	if filter.Limit != nil && *filter.Limit > 0 {
 		query = query.Limit(*filter.Limit)
 	}
@@ -154,7 +154,7 @@ func ApplyUserActivitiesPaginationConditions(query *gorm.DB, filter UserActivity
 		}
 		sortColumn := "id"
 		if filter.SortBy != nil {
-			if allowedUserActivitySortColumns[*filter.SortBy] {
+			if allowedActivityLogSortColumns[*filter.SortBy] {
 				sortColumn = *filter.SortBy
 			}
 		}

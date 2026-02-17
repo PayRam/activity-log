@@ -16,11 +16,11 @@ type trackerStubService struct {
 	updateErr error
 
 	mu      sync.Mutex
-	created []*models.UserActivity
-	updated []*models.UserActivity
+	created []*models.ActivityLog
+	updated []*models.ActivityLog
 }
 
-func (s *trackerStubService) Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (s *trackerStubService) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.created = append(s.created, activity)
 	s.mu.Unlock()
@@ -30,7 +30,7 @@ func (s *trackerStubService) Create(ctx context.Context, activity *models.UserAc
 	return activity, nil
 }
 
-func (s *trackerStubService) UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (s *trackerStubService) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.updated = append(s.updated, activity)
 	s.mu.Unlock()
@@ -40,7 +40,7 @@ func (s *trackerStubService) UpdateBySessionID(ctx context.Context, activity *mo
 	return activity, nil
 }
 
-func (s *trackerStubService) Get(ctx context.Context, filter repositories.UserActivityFilters) ([]models.UserActivity, int64, error) {
+func (s *trackerStubService) Get(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	return nil, 0, nil
 }
 

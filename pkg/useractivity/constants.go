@@ -1,6 +1,6 @@
 package useractivity
 
 const (
-	DefaultGetLimit                  = 100
-	ConfigKeyUserActivityExportLimit = "user.activity.export.limit"
+	DefaultGetLimit                 = 100
+	ConfigKeyActivityLogExportLimit = "user.activity.export.limit"
 )

@@ -2,7 +2,7 @@ package useractivity
 
 import "context"
 
-// AccessContext describes a member's access scope for user activity logs.
+// AccessContext describes a member's access scope for activity log logs.
 type AccessContext struct {
 	IsAdmin           bool
 	AllowedProjectIDs []uint

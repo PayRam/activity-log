@@ -54,7 +54,7 @@ type Config struct {
 	OnError func(error)
 }
 
-// Middleware returns a net/http middleware that logs user activity.
+// Middleware returns a net/http middleware that logs activity log.
 func Middleware(cfg Config) func(http.Handler) http.Handler {
 	if cfg.Client == nil {
 		return func(next http.Handler) http.Handler { return next }

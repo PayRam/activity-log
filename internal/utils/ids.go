@@ -7,7 +7,7 @@ import (
 )
 
 // CollectMemberIDs returns a distinct member ID list.
-func CollectMemberIDs(list []models.UserActivity) []uint {
+func CollectMemberIDs(list []models.ActivityLog) []uint {
 	idSet := make(map[uint]struct{})
 	for _, activity := range list {
 		if activity.MemberID != nil {
@@ -18,7 +18,7 @@ func CollectMemberIDs(list []models.UserActivity) []uint {
 }
 
 // CollectExternalPlatformIDs returns a distinct external platform ID list.
-func CollectExternalPlatformIDs(list []models.UserActivity) []uint {
+func CollectExternalPlatformIDs(list []models.ActivityLog) []uint {
 	idSet := make(map[uint]struct{})
 	for _, activity := range list {
 		for _, id := range activity.ExternalPlatformIDs {

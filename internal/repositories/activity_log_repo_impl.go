@@ -10,25 +10,25 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// UserActivityRepositoryImpl implements UserActivityRepository using GORM.
-type UserActivityRepositoryImpl struct {
+// ActivityLogRepositoryImpl implements ActivityLogRepository using GORM.
+type ActivityLogRepositoryImpl struct {
 	db     *gorm.DB
 	logger *zap.Logger
 }
 
-// NewUserActivityRepository creates a new GORM-backed repository.
-func NewUserActivityRepository(db *gorm.DB, logger *zap.Logger) *UserActivityRepositoryImpl {
-	return &UserActivityRepositoryImpl{db: db, logger: logger}
+// NewActivityLogRepository creates a new GORM-backed repository.
+func NewActivityLogRepository(db *gorm.DB, logger *zap.Logger) *ActivityLogRepositoryImpl {
+	return &ActivityLogRepositoryImpl{db: db, logger: logger}
 }
 
 // Create inserts a new activity record.
-func (r *UserActivityRepositoryImpl) Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (r *ActivityLogRepositoryImpl) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	if activity == nil {
 		return nil, fmt.Errorf("activity is nil")
 	}
 	if result := r.db.WithContext(ctx).Create(activity); result.Error != nil {
 		if r.logger != nil {
-			r.logger.Error("Failed to create user activity", zap.Error(result.Error))
+			r.logger.Error("Failed to create activity log", zap.Error(result.Error))
 		}
 		return nil, fmt.Errorf("failed to create activity: %w", result.Error)
 	}
@@ -36,7 +36,7 @@ func (r *UserActivityRepositoryImpl) Create(ctx context.Context, activity *model
 }
 
 // UpdateBySessionID updates an activity record by session ID with row locking.
-func (r *UserActivityRepositoryImpl) UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (r *ActivityLogRepositoryImpl) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	if activity == nil {
 		return nil, fmt.Errorf("activity is nil")
 	}
@@ -48,19 +48,19 @@ func (r *UserActivityRepositoryImpl) UpdateBySessionID(ctx context.Context, acti
 		// Lock row for update
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("session_id = ?", activity.SessionID).
-			First(&models.UserActivity{}).Error; err != nil {
+			First(&models.ActivityLog{}).Error; err != nil {
 			if r.logger != nil {
-				r.logger.Error("Failed to lock user activity", zap.String("session_id", activity.SessionID), zap.Error(err))
+				r.logger.Error("Failed to lock activity log", zap.String("session_id", activity.SessionID), zap.Error(err))
 			}
 			return fmt.Errorf("failed to lock activity with session_id %s: %w", activity.SessionID, err)
 		}
 
 		// Update using struct (zero values omitted by GORM)
-		if err := tx.Model(&models.UserActivity{}).
+		if err := tx.Model(&models.ActivityLog{}).
 			Where("session_id = ?", activity.SessionID).
 			Updates(activity).Error; err != nil {
 			if r.logger != nil {
-				r.logger.Error("Failed to update user activity", zap.String("session_id", activity.SessionID), zap.Error(err))
+				r.logger.Error("Failed to update activity log", zap.String("session_id", activity.SessionID), zap.Error(err))
 			}
 			return fmt.Errorf("failed to update activity with session_id %s: %w", activity.SessionID, err)
 		}
@@ -79,29 +79,29 @@ func (r *UserActivityRepositoryImpl) UpdateBySessionID(ctx context.Context, acti
 	return activity, nil
 }
 
-// GetUserActivities retrieves activities with filtering and pagination.
-func (r *UserActivityRepositoryImpl) GetUserActivities(ctx context.Context, filter UserActivityFilters) ([]models.UserActivity, int64, error) {
-	var activities []models.UserActivity
+// GetActivityLogs retrieves activities with filtering and pagination.
+func (r *ActivityLogRepositoryImpl) GetActivityLogs(ctx context.Context, filter ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+	var activities []models.ActivityLog
 	var totalCount int64
 
-	query := r.db.WithContext(ctx).Model(&models.UserActivity{})
-	query = ApplyUserActivityGetFilters(query, filter)
+	query := r.db.WithContext(ctx).Model(&models.ActivityLog{})
+	query = ApplyActivityLogGetFilters(query, filter)
 
 	if err := query.Count(&totalCount).Error; err != nil {
 		if r.logger != nil {
-			r.logger.Error("Failed to count user activities", zap.Error(err))
+			r.logger.Error("Failed to count activity logs", zap.Error(err))
 		}
 		return nil, 0, fmt.Errorf("failed to count activities: %w", err)
 	}
 
-	query = ApplyUserActivitiesPaginationConditions(query, filter)
+	query = ApplyActivityLogsPaginationConditions(query, filter)
 	if filter.Order == nil {
 		query = query.Order("created_at DESC")
 	}
 
 	if result := query.Find(&activities); result.Error != nil {
 		if r.logger != nil {
-			r.logger.Error("Failed to fetch user activities", zap.Error(result.Error))
+			r.logger.Error("Failed to fetch activity logs", zap.Error(result.Error))
 		}
 		return nil, 0, fmt.Errorf("failed to fetch activities: %w", result.Error)
 	}
@@ -110,11 +110,11 @@ func (r *UserActivityRepositoryImpl) GetUserActivities(ctx context.Context, filt
 }
 
 // GetEventCategories retrieves distinct event categories.
-func (r *UserActivityRepositoryImpl) GetEventCategories(ctx context.Context) ([]string, error) {
+func (r *ActivityLogRepositoryImpl) GetEventCategories(ctx context.Context) ([]string, error) {
 	var categories []string
 
 	if err := r.db.WithContext(ctx).
-		Model(&models.UserActivity{}).
+		Model(&models.ActivityLog{}).
 		Where("event_category IS NOT NULL").
 		Distinct("event_category").
 		Order("event_category ASC").

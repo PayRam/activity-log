@@ -3,18 +3,18 @@ package models
 import "sync"
 
 var (
-	tablePrefix           string
-	tablePrefixOnce       sync.Once
-	userActivityTableName string
-	userActivityTableOnce sync.Once
+	tablePrefix          string
+	tablePrefixOnce      sync.Once
+	activityLogTableName string
+	activityLogTableOnce sync.Once
 )
 
 const (
-	// DefaultUserActivityTableName is the default DB table used by the library.
-	DefaultUserActivityTableName = "user_activities"
+	// DefaultActivityLogTableName is the default DB table used by the library.
+	DefaultActivityLogTableName = "activity_logs"
 )
 
-// SetTablePrefix sets the global table prefix for all user activity models.
+// SetTablePrefix sets the global table prefix for all activity log models.
 // This should be called once during application initialization.
 func SetTablePrefix(prefix string) {
 	tablePrefixOnce.Do(func() {
@@ -22,11 +22,11 @@ func SetTablePrefix(prefix string) {
 	})
 }
 
-// SetUserActivityTableName overrides the base user activity table name.
+// SetActivityLogTableName overrides the base activity log table name.
 // This should be called once during application initialization.
-func SetUserActivityTableName(tableName string) {
-	userActivityTableOnce.Do(func() {
-		userActivityTableName = tableName
+func SetActivityLogTableName(tableName string) {
+	activityLogTableOnce.Do(func() {
+		activityLogTableName = tableName
 	})
 }
 
@@ -35,18 +35,18 @@ func GetTablePrefix() string {
 	return tablePrefix
 }
 
-// GetUserActivityTableName returns the configured user activity base table name.
-func GetUserActivityTableName() string {
-	if userActivityTableName != "" {
-		return userActivityTableName
+// GetActivityLogTableName returns the configured activity log base table name.
+func GetActivityLogTableName() string {
+	if activityLogTableName != "" {
+		return activityLogTableName
 	}
-	return DefaultUserActivityTableName
+	return DefaultActivityLogTableName
 }
 
 // GetTableName returns the full table name with prefix.
 func GetTableName(baseName string) string {
-	if baseName == DefaultUserActivityTableName {
-		baseName = GetUserActivityTableName()
+	if baseName == DefaultActivityLogTableName {
+		baseName = GetActivityLogTableName()
 	}
 	return tablePrefix + baseName
 }
@@ -55,6 +55,6 @@ func GetTableName(baseName string) string {
 func ResetTablePrefix() {
 	tablePrefix = ""
 	tablePrefixOnce = sync.Once{}
-	userActivityTableName = ""
-	userActivityTableOnce = sync.Once{}
+	activityLogTableName = ""
+	activityLogTableOnce = sync.Once{}
 }

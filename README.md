@@ -1,6 +1,6 @@
 # activity-log
 
-Go library for persisting user activity logs with:
+Go library for persisting activity log logs with:
 
 - direct APIs: `Create`, `Update`, `Get`, `GetEventCategories`
 - optional HTTP middleware: Gin and `net/http`
@@ -92,7 +92,7 @@ This is useful when one API call triggers multiple service operations.
 activity-log/
 ├── pkg/
 │   └── useractivity/                # public API surface
-│       ├── user_activity.go         # Client + Create/Update/Get APIs
+│       ├── activity_log.go         # Client + Create/Update/Get APIs
 │       ├── types.go                 # request/response contracts
 │       ├── service_tracker.go       # service/repository operation tracker
 │       ├── geolocation.go           # public geolocation API + enrichers
@@ -124,7 +124,7 @@ Dependency direction:
 
 - `DB *gorm.DB` (required): gorm database handle
 - `Logger *zap.Logger` (optional): defaults to production zap logger
-- `TablePrefix string` (optional): prefixes `user_activities` table name
+- `TablePrefix string` (optional): prefixes `activity_logs` table name
 - `TableName string` (optional): overrides base table name (for example `activity_logs`)
 - `EventDeriver EventDeriver` (optional): derives `EventCategory`/`EventName` on `Create` when those fields are missing
 - `EventInfoDeriver EventInfoDeriver` (optional): derives `EventCategory`/`EventName`/`Description` on `Create` and `Update` when those fields are missing
@@ -135,7 +135,7 @@ Dependency direction:
 
 ## Environment Variables
 
-- `USER_ACTIVITY_TEST_POSTGRES_DSN`: PostgreSQL DSN used by integration tests that need a real database
+- `ACTIVITY_LOG_TEST_POSTGRES_DSN`: PostgreSQL DSN used by integration tests that need a real database
 - `GEOLOCATION_PROVIDER_URL`: geolocation provider URL template fallback (used when `GeoLookupConfig.ProviderURLTemplate` is empty)
 - `GEOLOCATION_PROVIDER_NAME`: geolocation provider name fallback (used when `GeoLookupConfig.ProviderName` is empty)
 
@@ -618,7 +618,7 @@ if err := client.AutoMigrate(ctx); err != nil {
 }
 ```
 
-Table name is `user_activities` unless you set `Config.TablePrefix`.
+Table name is `activity_logs` unless you set `Config.TablePrefix`.
 
 If your app uses a different table name, set:
 
@@ -634,7 +634,7 @@ Example result:
 
 Integration tests that touch PostgreSQL require:
 
-- `USER_ACTIVITY_TEST_POSTGRES_DSN`
+- `ACTIVITY_LOG_TEST_POSTGRES_DSN`
 
 ```bash
 go test ./...

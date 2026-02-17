@@ -2,7 +2,7 @@ package useractivity
 
 import "time"
 
-// Activity represents a persisted user activity record.
+// Activity represents a persisted activity log record.
 type Activity struct {
 	ID        uint
 	CreatedAt time.Time
@@ -137,7 +137,7 @@ type PaginationConditions struct {
 	EndDate       *time.Time `form:"endDate"`
 }
 
-// GetRequest defines filters for getting user activities.
+// GetRequest defines filters for getting activity logs.
 type GetRequest struct {
 	StatusCodes         []int    `form:"statusCode"`
 	Search              *string  `form:"search"`

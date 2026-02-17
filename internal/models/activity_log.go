@@ -9,8 +9,8 @@ import (
 // UintSlice is a custom type for []uint that implements sql.Scanner and driver.Valuer.
 type UintSlice []uint
 
-// UserActivity represents a single user activity record.
-type UserActivity struct {
+// ActivityLog represents a single activity log record.
+type ActivityLog struct {
 	BaseModel
 
 	// Actor
@@ -49,8 +49,8 @@ type UserActivity struct {
 }
 
 // TableName applies the configured table prefix.
-func (UserActivity) TableName() string {
-	return GetTableName(DefaultUserActivityTableName)
+func (ActivityLog) TableName() string {
+	return GetTableName(DefaultActivityLogTableName)
 }
 
 // Scan implements sql.Scanner for reading from database.

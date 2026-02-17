@@ -25,8 +25,8 @@ type stubService struct {
 	updateErr error
 
 	mu      sync.Mutex
-	created []*models.UserActivity
-	updated []*models.UserActivity
+	created []*models.ActivityLog
+	updated []*models.ActivityLog
 
 	createCh chan struct{}
 	updateCh chan struct{}
@@ -46,7 +46,7 @@ func jsonRoundTripResponse(body string) *http.Response {
 	}
 }
 
-func (s *stubService) Create(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (s *stubService) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.created = append(s.created, activity)
 	s.mu.Unlock()
@@ -59,7 +59,7 @@ func (s *stubService) Create(ctx context.Context, activity *models.UserActivity)
 	return activity, nil
 }
 
-func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.UserActivity) (*models.UserActivity, error) {
+func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.updated = append(s.updated, activity)
 	s.mu.Unlock()
@@ -72,7 +72,7 @@ func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.Us
 	return activity, nil
 }
 
-func (s *stubService) Get(ctx context.Context, filter repositories.UserActivityFilters) ([]models.UserActivity, int64, error) {
+func (s *stubService) Get(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	return nil, 0, nil
 }
 
@@ -80,7 +80,7 @@ func (s *stubService) GetEventCategories(ctx context.Context) ([]string, error) 
 	return nil, nil
 }
 
-func setClientService(t *testing.T, client *useractivity.Client, svc services.UserActivityService) {
+func setClientService(t *testing.T, client *useractivity.Client, svc services.ActivityLogService) {
 	t.Helper()
 	v := reflect.ValueOf(client).Elem().FieldByName("svc")
 	if !v.IsValid() {
@@ -89,7 +89,7 @@ func setClientService(t *testing.T, client *useractivity.Client, svc services.Us
 	reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Set(reflect.ValueOf(svc))
 }
 
-func newTestClient(t *testing.T, svc services.UserActivityService) *useractivity.Client {
+func newTestClient(t *testing.T, svc services.ActivityLogService) *useractivity.Client {
 	t.Helper()
 	client := &useractivity.Client{}
 	setClientService(t, client, svc)
