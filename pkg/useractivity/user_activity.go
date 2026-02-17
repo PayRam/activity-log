@@ -15,10 +15,12 @@ import (
 
 // Config configures the user activity client.
 type Config struct {
-	DB          *gorm.DB
-	Logger      *zap.Logger
-	TablePrefix string
-	TableName   string
+	DB               *gorm.DB
+	Logger           *zap.Logger
+	TablePrefix      string
+	TableName        string
+	EventDeriver     EventDeriver
+	EventInfoDeriver EventInfoDeriver
 
 	AccessResolver           AccessResolver
 	ConfigProvider           ConfigProvider
@@ -28,9 +30,11 @@ type Config struct {
 
 // Client provides Create/Update APIs for user activity records.
 type Client struct {
-	db     *gorm.DB
-	svc    services.UserActivityService
-	logger *zap.Logger
+	db               *gorm.DB
+	svc              services.UserActivityService
+	logger           *zap.Logger
+	eventDeriver     EventDeriver
+	eventInfoDeriver EventInfoDeriver
 
 	accessResolver           AccessResolver
 	configProvider           ConfigProvider
@@ -64,6 +68,8 @@ func New(cfg Config) (*Client, error) {
 		db:                       cfg.DB,
 		svc:                      svc,
 		logger:                   logger,
+		eventDeriver:             cfg.EventDeriver,
+		eventInfoDeriver:         cfg.EventInfoDeriver,
 		accessResolver:           cfg.AccessResolver,
 		configProvider:           cfg.ConfigProvider,
 		memberResolver:           cfg.MemberResolver,
@@ -102,6 +108,8 @@ func (c *Client) Create(ctx context.Context, req CreateRequest) (*Activity, erro
 	if req.APIStatus == "" {
 		return nil, fmt.Errorf("api_status is required")
 	}
+
+	applyEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
 	activity := &models.UserActivity{
 		MemberID:            req.MemberID,
@@ -147,6 +155,8 @@ func (c *Client) Update(ctx context.Context, req UpdateRequest) (*Activity, erro
 	if req.SessionID == "" {
 		return nil, fmt.Errorf("session_id is required")
 	}
+
+	applyUpdateEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
 	activity := &models.UserActivity{
 		SessionID:     req.SessionID,
@@ -222,7 +232,7 @@ func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetRes
 		EventNames:          req.EventNames,
 		EventCategories:     req.EventCategories,
 		Search:              req.Search,
-		StatusCode:          req.StatusCode,
+		StatusCodes:         req.StatusCodes,
 		IPAddresses:         req.IPAddresses,
 		Countries:           req.Countries,
 		Roles:               req.Roles,
@@ -275,6 +285,89 @@ func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetRes
 	}
 
 	return c.mapActivities(ctx, activities, total)
+}
+
+func applyEventFallback(req *CreateRequest, eventDeriver EventDeriver, eventInfoDeriver EventInfoDeriver) {
+	if req == nil {
+		return
+	}
+	if req.EventCategory != nil && req.EventName != nil && req.Description != nil {
+		return
+	}
+
+	info := deriveEventInfo(EventDeriverInput{
+		Endpoint:    req.Endpoint,
+		Method:      req.Method,
+		RequestBody: req.RequestBody,
+		StatusCode:  req.StatusCode,
+		APIStatus:   req.APIStatus,
+	}, eventDeriver, eventInfoDeriver)
+
+	if req.EventCategory == nil {
+		if info.EventCategory == "" {
+			return
+		}
+		category := info.EventCategory
+		req.EventCategory = &category
+	}
+	if req.EventName == nil {
+		if info.EventName == "" {
+			return
+		}
+		name := info.EventName
+		req.EventName = &name
+	}
+	if req.Description == nil && info.Description != "" {
+		description := info.Description
+		req.Description = &description
+	}
+}
+
+func applyUpdateEventFallback(req *UpdateRequest, eventDeriver EventDeriver, eventInfoDeriver EventInfoDeriver) {
+	if req == nil {
+		return
+	}
+	if req.EventCategory != nil && req.EventName != nil && req.Description != nil {
+		return
+	}
+
+	endpoint := ""
+	if req.Endpoint != nil {
+		endpoint = *req.Endpoint
+	}
+	method := ""
+	if req.Method != nil {
+		method = *req.Method
+	}
+	apiStatus := ""
+	if req.APIStatus != nil {
+		apiStatus = *req.APIStatus
+	}
+
+	if endpoint == "" && method == "" {
+		return
+	}
+
+	info := deriveEventInfo(EventDeriverInput{
+		Endpoint:    endpoint,
+		Method:      method,
+		RequestBody: req.RequestBody,
+		StatusCode:  req.StatusCode,
+		APIStatus:   apiStatus,
+	}, eventDeriver, eventInfoDeriver)
+
+	if req.EventCategory == nil && info.EventCategory != "" {
+		category := info.EventCategory
+		req.EventCategory = &category
+	}
+	if req.EventName == nil && info.EventName != "" {
+		name := info.EventName
+		req.EventName = &name
+	}
+	if req.Description == nil && info.Description != "" {
+		description := info.Description
+		req.Description = &description
+	}
 }
 
 // GetEventCategories retrieves distinct event categories.

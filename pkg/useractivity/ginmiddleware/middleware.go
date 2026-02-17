@@ -150,10 +150,15 @@ func Middleware(cfg Config) gin.HandlerFunc {
 		status := recorder.Status()
 		body := recorder.Body()
 		apiStatus := middleware.StatusToAPIStatus(status)
+		method := c.Request.Method
+		endpoint := c.Request.URL.Path
 		updateReq := useractivity.UpdateRequest{
-			SessionID:  sessionID,
-			APIStatus:  &apiStatus,
-			StatusCode: &status,
+			SessionID:   sessionID,
+			Method:      &method,
+			Endpoint:    &endpoint,
+			APIStatus:   &apiStatus,
+			StatusCode:  &status,
+			RequestBody: requestBody,
 		}
 		if cfg.CaptureResponseBody && body != "" {
 			body = redactResponseBody(cfg, body)

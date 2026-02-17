@@ -6,6 +6,7 @@ Go library for persisting user activity logs with:
 - optional HTTP middleware: Gin and `net/http`
 - optional service-level tracker for business/repository operations
 - metadata merge, JSON redaction, and geolocation helpers
+- no built-in HTTP handlers or runnable app entrypoint
 
 Repository: `https://github.com/PayRam/activity-log`  
 Module path: `github.com/PayRam/activity-log`
@@ -89,8 +90,6 @@ This is useful when one API call triggers multiple service operations.
 
 ```text
 activity-log/
-├── cmd/
-│   └── example/                     # runnable integration sample
 ├── pkg/
 │   └── useractivity/                # public API surface
 │       ├── user_activity.go         # Client + Create/Update/Get APIs
@@ -99,9 +98,8 @@ activity-log/
 │       ├── geolocation.go           # public geolocation API + enrichers
 │       ├── metadata.go              # public metadata merge helper
 │       ├── redact.go                # public redaction helper
-│       ├── ginmiddleware/           # Gin middleware
-│       ├── httpmiddleware/          # net/http middleware
-│       └── ginhandlers/             # optional read/export handlers
+│       ├── ginmiddleware/           # optional Gin adapter middleware
+│       └── httpmiddleware/          # optional net/http adapter middleware
 ├── internal/                        # private implementation details
 │   ├── models/                      # gorm models + table config
 │   ├── repositories/                # gorm query + persistence layer
@@ -114,7 +112,7 @@ activity-log/
 
 Dependency direction:
 
-- app imports `pkg/useractivity` (and optional `pkg/useractivity/ginmiddleware`, `pkg/useractivity/httpmiddleware`, `pkg/useractivity/ginhandlers`)
+- app imports `pkg/useractivity` (and optional `pkg/useractivity/ginmiddleware`, `pkg/useractivity/httpmiddleware`)
 - `pkg/useractivity` uses `internal/services`
 - `internal/services` uses `internal/repositories`
 - `internal/repositories` uses `internal/models` + `gorm`
@@ -128,6 +126,8 @@ Dependency direction:
 - `Logger *zap.Logger` (optional): defaults to production zap logger
 - `TablePrefix string` (optional): prefixes `user_activities` table name
 - `TableName string` (optional): overrides base table name (for example `activity_logs`)
+- `EventDeriver EventDeriver` (optional): derives `EventCategory`/`EventName` on `Create` when those fields are missing
+- `EventInfoDeriver EventInfoDeriver` (optional): derives `EventCategory`/`EventName`/`Description` on `Create` and `Update` when those fields are missing
 - `AccessResolver AccessResolver` (optional): applies `Get` access scoping
 - `ConfigProvider ConfigProvider` (optional): can override export limit (`user.activity.export.limit`)
 - `MemberResolver MemberResolver` (optional): hydrates `Activity.Member` in `Get`
@@ -135,7 +135,6 @@ Dependency direction:
 
 ## Environment Variables
 
-- `USER_ACTIVITY_POSTGRES_DSN`: PostgreSQL DSN used by `cmd/example` (required when running the example server)
 - `USER_ACTIVITY_TEST_POSTGRES_DSN`: PostgreSQL DSN used by integration tests that need a real database
 - `GEOLOCATION_PROVIDER_URL`: geolocation provider URL template fallback (used when `GeoLookupConfig.ProviderURLTemplate` is empty)
 - `GEOLOCATION_PROVIDER_NAME`: geolocation provider name fallback (used when `GeoLookupConfig.ProviderName` is empty)
@@ -254,6 +253,28 @@ Notes:
 
 - `Endpoint` is stored in DB field `api_part`.
 - `ExternalPlatformIDs` is stored as JSON/JSONB array.
+- if `EventCategory` / `EventName` are not provided, library falls back to URL segment after `/api/v1/` (for example `/api/v1/payment-request` -> `payment-request`)
+- if `Config.EventInfoDeriver` is provided, it is used first for category/name/description fallback
+- if `Config.EventDeriver` is provided, it is used for category/name fallback when event info deriver does not provide those values
+
+Event deriver options:
+
+- `DefaultEventDeriver`: default endpoint-based fallback
+- `DefaultEventInfoDeriver`: default endpoint/method/status-based fallback including description
+- `NewCoreLikeEventDeriver`: helper that approximates `test/core` `deriveEventInfo` style (`CATEGORY_ACTION`)
+- `NewCoreLikeEventInfoDeriver`: helper that approximates `test/core` `deriveEventInfo` style (`CATEGORY_ACTION`) and description text
+
+Example:
+
+```go
+client, err := useractivity.New(useractivity.Config{
+	DB: db,
+	EventInfoDeriver: useractivity.NewCoreLikeEventInfoDeriver(useractivity.CoreLikeEventDeriverConfig{
+		BasePath:   "/api/v1",
+		TableNames: []string{"members", "payment_requests", "withdrawals"},
+	}),
+})
+```
 
 ### `Update(ctx, UpdateRequest)`
 
@@ -341,8 +362,8 @@ Implementation detail:
 
 Supported filters:
 
-- exact/single: `StatusCode`, `Search`, `SessionID`, `ProjectFilter`
-- arrays: `EventCategories`, `Methods`, `EventNames`, `IDS`, `MemberIDs`, `ExternalPlatformIDs`, `APIStatuses`, `IPAddresses`, `Countries`, `Roles`
+- arrays: `StatusCodes` (query key: `statusCode` repeated), `EventCategories`, `Methods`, `EventNames`, `IDS`, `MemberIDs`, `ExternalPlatformIDs`, `APIStatuses`, `IPAddresses`, `Countries`, `Roles`
+- exact/single: `Search`, `SessionID`, `ProjectFilter`
 - pagination/time: `Limit`, `Offset`, `SortBy`, `Order`, `GreaterThanID`, `LessThanID`, `CreatedAfter`, `CreatedBefore`, `UpdatedAfter`, `UpdatedBefore`, `StartDate`, `EndDate`
 - internal flag: `Export`
 
@@ -579,23 +600,6 @@ Important:
 - redaction is JSON key-based
 - non-JSON payloads are unchanged
 - request/response headers are not captured/redacted by default middleware
-
-## Gin Handlers (Optional)
-
-Package: `github.com/PayRam/activity-log/pkg/useractivity/ginhandlers`
-
-Routes:
-
-- `GET /user-activity`
-- `GET /user-activity/event-categories`
-- `GET /user-activity/export` (CSV)
-
-`HandlerConfig`:
-
-- `Client *useractivity.Client`
-- `MemberIDFromContext func(*gin.Context) (uint, bool)`
-- `RequireMember bool`
-- `ErrorHandler func(*gin.Context, error)`
 
 ## Errors
 

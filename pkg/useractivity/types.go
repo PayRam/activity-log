@@ -139,7 +139,7 @@ type PaginationConditions struct {
 
 // GetRequest defines filters for getting user activities.
 type GetRequest struct {
-	StatusCode          *int     `form:"statusCode"`
+	StatusCodes         []int    `form:"statusCode"`
 	Search              *string  `form:"search"`
 	SessionID           *string  `form:"sessionID"`
 	EventCategories     []string `form:"eventCategories"`

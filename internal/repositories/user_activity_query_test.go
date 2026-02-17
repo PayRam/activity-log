@@ -34,7 +34,6 @@ func buildSQL(t *testing.T, query *gorm.DB) string {
 
 func TestApplyUserActivityGetFilters_Basic(t *testing.T) {
 	db := newDryRunDB(t)
-	status := 200
 	session := "sess"
 	search := "term"
 	filter := UserActivityFilters{
@@ -44,7 +43,7 @@ func TestApplyUserActivityGetFilters_Basic(t *testing.T) {
 		APIStatuses:         []string{"SUCCESS"},
 		EventNames:          []string{"LOGIN"},
 		EventCategories:     []string{"AUTH"},
-		StatusCode:          &status,
+		StatusCodes:         []int{200, 201},
 		SessionID:           &session,
 		Search:              &search,
 		IPAddresses:         []string{"1.1.1.1"},

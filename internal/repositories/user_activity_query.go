@@ -12,7 +12,7 @@ import (
 type UserActivityFilters struct {
 	SessionID           *string
 	Search              *string
-	StatusCode          *int
+	StatusCodes         []int
 	IDS                 []uint
 	MemberIDs           []uint
 	Methods             []string
@@ -77,8 +77,8 @@ func ApplyUserActivityGetFilters(query *gorm.DB, filter UserActivityFilters) *go
 		query = query.Where(fmt.Sprintf("%s.event_category IN ?", tableName), filter.EventCategories)
 	}
 
-	if filter.StatusCode != nil {
-		query = query.Where(fmt.Sprintf("%s.status_code = ?", tableName), *filter.StatusCode)
+	if len(filter.StatusCodes) > 0 {
+		query = query.Where(fmt.Sprintf("%s.status_code IN ?", tableName), filter.StatusCodes)
 	}
 	if filter.Search != nil {
 		searchPattern := "%" + *filter.Search + "%"
