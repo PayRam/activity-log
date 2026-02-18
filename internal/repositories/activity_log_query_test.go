@@ -70,7 +70,7 @@ func TestApplyActivityLogGetFilters_Basic(t *testing.T) {
 
 func TestApplyActivityLogGetFilters_ProjectFilter(t *testing.T) {
 	db := newDryRunDB(t)
-	projectFilter := "NO_IDS"
+	projectFilter := ProjectFilterNoIDs
 	filter := ActivityLogFilters{ProjectFilter: &projectFilter}
 
 	query := ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
@@ -79,7 +79,7 @@ func TestApplyActivityLogGetFilters_ProjectFilter(t *testing.T) {
 		t.Fatalf("expected SQL to contain NO_IDS condition, got: %s", sql)
 	}
 
-	projectFilter = "ALL"
+	projectFilter = ProjectFilterAll
 	filter = ActivityLogFilters{ProjectFilter: &projectFilter}
 	query = ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
 	sql = buildSQL(t, query)

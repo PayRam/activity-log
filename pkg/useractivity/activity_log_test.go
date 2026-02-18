@@ -496,7 +496,7 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 		configProvider: &stubConfigProvider{val: 10, ok: true},
 	}
 
-	projectFilter := "ALL"
+	projectFilter := ProjectFilterAll
 	req := GetRequest{ProjectFilter: &projectFilter, Export: true}
 	if _, err := c.GetActivityLogs(context.Background(), 5, req); err != nil {
 		t.Fatalf("unexpected get error: %v", err)
@@ -513,7 +513,7 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 		t.Fatalf("expected unauthorized error, got %v", err)
 	}
 
-	unknownFilter := "SOMETHING_ELSE"
+	unknownFilter := ProjectFilter("SOMETHING_ELSE")
 	req = GetRequest{ProjectFilter: &unknownFilter}
 	if _, err := c.GetActivityLogs(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized error for unknown project filter, got %v", err)

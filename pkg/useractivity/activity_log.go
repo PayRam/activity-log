@@ -231,7 +231,7 @@ func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequ
 		MemberIDs:       req.MemberIDs,
 		SessionIDs:      req.SessionIDs,
 		ProjectIDs:      req.ProjectIDs,
-		ProjectFilter:   req.ProjectFilter,
+		ProjectFilter:   projectFilterToRepository(req.ProjectFilter),
 		Limit:           req.PaginationConditions.Limit,
 		Offset:          req.PaginationConditions.Offset,
 		StartDate:       req.PaginationConditions.StartDate,
@@ -430,9 +430,9 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 
 	if req.ProjectFilter != nil {
 		switch *req.ProjectFilter {
-		case "NO_IDS":
+		case ProjectFilterNoIDs:
 			return ErrUnauthorized
-		case "ALL":
+		case ProjectFilterAll:
 			if len(allowed) == 0 {
 				req.ProjectIDs = []uint{0}
 			} else {
@@ -451,6 +451,14 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 	}
 	req.ProjectIDs = allowed
 	return nil
+}
+
+func projectFilterToRepository(filter *ProjectFilter) *repositories.ProjectFilter {
+	if filter == nil {
+		return nil
+	}
+	converted := repositories.ProjectFilter(*filter)
+	return &converted
 }
 
 func (c *Client) mapActivities(ctx context.Context, modelsList []models.ActivityLog, total int64) (GetResponse, error) {

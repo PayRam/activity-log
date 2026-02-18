@@ -23,7 +23,7 @@ type ActivityLogFilters struct {
 	Countries       []string
 	Roles           []string
 	ProjectIDs      []uint
-	ProjectFilter   *string
+	ProjectFilter   *ProjectFilter // NO_IDS filters logs with no project IDs; ALL filters logs with any project IDs; nil ignores this filter.
 
 	Limit         *int
 	Offset        *int
@@ -119,9 +119,9 @@ func ApplyActivityLogGetFilters(query *gorm.DB, filter ActivityLogFilters) *gorm
 
 	if filter.ProjectFilter != nil {
 		switch *filter.ProjectFilter {
-		case "NO_IDS":
+		case ProjectFilterNoIDs:
 			query = query.Where("(external_platform_ids IS NULL OR external_platform_ids::jsonb = '[]'::jsonb OR external_platform_ids::jsonb = 'null'::jsonb)")
-		case "ALL":
+		case ProjectFilterAll:
 			query = query.Where("(external_platform_ids IS NOT NULL AND external_platform_ids::jsonb != '[]'::jsonb AND external_platform_ids::jsonb != 'null'::jsonb)")
 		}
 	} else if len(filter.ProjectIDs) > 0 {
