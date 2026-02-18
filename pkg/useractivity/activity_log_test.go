@@ -3,6 +3,7 @@ package useractivity
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -15,29 +16,97 @@ import (
 )
 
 type stubService struct {
-	createFn     func(*models.ActivityLog) (*models.ActivityLog, error)
-	updateFn     func(*models.ActivityLog) (*models.ActivityLog, error)
+	createFn     func(repositories.CreateActivityLogParams) (*models.ActivityLog, error)
+	updateFn     func(repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error)
 	getFn        func(repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error)
 	categoriesFn func() ([]string, error)
 	lastFilter   repositories.ActivityLogFilters
-	lastCreate   *models.ActivityLog
-	lastUpdate   *models.ActivityLog
+	lastCreate   repositories.CreateActivityLogParams
+	lastUpdate   repositories.UpdateActivityLogSessionParams
 }
 
-func (s *stubService) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	s.lastCreate = activity
+func (s *stubService) CreateActivityLogs(ctx context.Context, params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
+	s.lastCreate = params
 	if s.createFn != nil {
-		return s.createFn(activity)
+		return s.createFn(params)
 	}
-	return activity, nil
+	model := &models.ActivityLog{
+		MemberID:      params.MemberID,
+		SessionID:     params.SessionID,
+		Method:        params.Method,
+		APIPart:       params.APIPart,
+		APIStatus:     params.APIStatus,
+		StatusCode:    params.StatusCode,
+		Description:   params.Description,
+		IPAddress:     params.IPAddress,
+		UserAgent:     params.UserAgent,
+		Referer:       params.Referer,
+		APIAction:     params.APIAction,
+		APIErrorMsg:   params.APIErrorMsg,
+		RequestBody:   params.RequestBody,
+		ResponseBody:  params.ResponseBody,
+		Metadata:      params.Metadata,
+		Role:          params.Role,
+		EventCategory: params.EventCategory,
+		EventName:     params.EventName,
+		Country:       params.Country,
+		CountryCode:   params.CountryCode,
+		Region:        params.Region,
+		City:          params.City,
+		Timezone:      params.Timezone,
+		Latitude:      params.Latitude,
+		Longitude:     params.Longitude,
+	}
+	if params.ProjectIDs != nil {
+		model.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+	}
+	return model, nil
 }
 
-func (s *stubService) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	s.lastUpdate = activity
+func (s *stubService) UpdateActivityLogSessionID(ctx context.Context, params repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error) {
+	s.lastUpdate = params
 	if s.updateFn != nil {
-		return s.updateFn(activity)
+		return s.updateFn(params)
 	}
-	return activity, nil
+	model := &models.ActivityLog{SessionID: params.SessionID}
+	if params.ProjectIDs != nil {
+		model.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+	}
+	if params.MemberID != nil {
+		model.MemberID = params.MemberID
+	}
+	if params.Method != nil {
+		model.Method = *params.Method
+	}
+	if params.APIPart != nil {
+		model.APIPart = *params.APIPart
+	}
+	if params.APIAction != nil {
+		model.APIAction = *params.APIAction
+	}
+	if params.APIStatus != nil {
+		model.APIStatus = *params.APIStatus
+	}
+	model.StatusCode = params.StatusCode
+	model.Description = params.Description
+	model.APIErrorMsg = params.APIErrorMsg
+	model.IPAddress = params.IPAddress
+	model.UserAgent = params.UserAgent
+	model.Referer = params.Referer
+	model.ResponseBody = params.ResponseBody
+	model.Metadata = params.Metadata
+	model.RequestBody = params.RequestBody
+	model.Role = params.Role
+	model.EventCategory = params.EventCategory
+	model.EventName = params.EventName
+	model.Country = params.Country
+	model.CountryCode = params.CountryCode
+	model.Region = params.Region
+	model.City = params.City
+	model.Timezone = params.Timezone
+	model.Latitude = params.Latitude
+	model.Longitude = params.Longitude
+	return model, nil
 }
 
 func (s *stubService) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
@@ -217,9 +286,15 @@ func TestCreateValidation(t *testing.T) {
 
 func TestCreateMapping(t *testing.T) {
 	stub := &stubService{
-		createFn: func(activity *models.ActivityLog) (*models.ActivityLog, error) {
-			activity.ID = 99
-			return activity, nil
+		createFn: func(params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
+			return &models.ActivityLog{
+				BaseModel: models.BaseModel{ID: 99},
+				SessionID: params.SessionID,
+				APIPart:   params.APIPart,
+				Method:    params.Method,
+				APIStatus: params.APIStatus,
+				APIAction: params.APIAction,
+			}, nil
 		},
 	}
 	c := &Client{svc: stub}
@@ -241,7 +316,7 @@ func TestCreateMapping(t *testing.T) {
 	if act == nil || act.ID != 99 || act.SessionID != "sess" {
 		t.Fatalf("unexpected activity: %#v", act)
 	}
-	if stub.lastCreate == nil || stub.lastCreate.APIPart != "/test" {
+	if stub.lastCreate.APIPart != "/test" {
 		t.Fatalf("expected create mapping to set APIPart")
 	}
 }
@@ -261,9 +336,7 @@ func TestCreateEventFallbackFromEndpoint(t *testing.T) {
 	if _, err := c.CreateActivityLogs(context.Background(), req); err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
-	if stub.lastCreate == nil {
-		t.Fatalf("expected create payload to be captured")
-	}
+
 	if stub.lastCreate.EventCategory == nil || *stub.lastCreate.EventCategory != "payment-request" {
 		t.Fatalf("expected fallback event category payment-request, got %+v", stub.lastCreate.EventCategory)
 	}
@@ -298,9 +371,6 @@ func TestCreateUsesConfiguredEventDeriver(t *testing.T) {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 
-	if stub.lastCreate == nil {
-		t.Fatalf("expected create payload to be captured")
-	}
 	if stub.lastCreate.EventCategory == nil || *stub.lastCreate.EventCategory != "MEMBERS" {
 		t.Fatalf("expected event category from custom deriver, got %+v", stub.lastCreate.EventCategory)
 	}
@@ -333,9 +403,6 @@ func TestCreateUsesConfiguredEventInfoDeriver(t *testing.T) {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 
-	if stub.lastCreate == nil {
-		t.Fatalf("expected create payload to be captured")
-	}
 	if stub.lastCreate.EventCategory == nil || *stub.lastCreate.EventCategory != "MEMBERS" {
 		t.Fatalf("expected event category from custom info deriver, got %+v", stub.lastCreate.EventCategory)
 	}
@@ -354,8 +421,8 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 	}
 
 	stub := &stubService{
-		updateFn: func(activity *models.ActivityLog) (*models.ActivityLog, error) {
-			return activity, nil
+		updateFn: func(params repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error) {
+			return &models.ActivityLog{SessionID: params.SessionID, Method: derefString(params.Method), Description: params.Description}, nil
 		},
 	}
 	c = &Client{svc: stub}
@@ -366,7 +433,7 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 	apiAction := "WRITE"
 	req := UpdateRequest{
 		SessionID:  "sess",
-		ProjectIDs: []uint{9},
+		ProjectIDs: uintSlicePtrTest([]uint{9}),
 		Method:     &method,
 		Endpoint:   &endpoint,
 		APIStatus:  &apiStatus,
@@ -375,15 +442,15 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 	if _, err := c.UpdateActivityLogSessionID(context.Background(), req); err != nil {
 		t.Fatalf("unexpected update error: %v", err)
 	}
-	if stub.lastUpdate == nil || stub.lastUpdate.Method != method {
+	if stub.lastUpdate.Method == nil || *stub.lastUpdate.Method != method {
 		t.Fatalf("expected update to map optional fields")
 	}
 }
 
 func TestUpdateDescriptionFallbackFromEventInfo(t *testing.T) {
 	stub := &stubService{
-		updateFn: func(activity *models.ActivityLog) (*models.ActivityLog, error) {
-			return activity, nil
+		updateFn: func(params repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error) {
+			return &models.ActivityLog{SessionID: params.SessionID, Method: derefString(params.Method), Description: params.Description}, nil
 		},
 	}
 	c := &Client{svc: stub}
@@ -391,7 +458,7 @@ func TestUpdateDescriptionFallbackFromEventInfo(t *testing.T) {
 	method := "POST"
 	endpoint := "/api/v1/payment-request"
 	apiStatus := APIStatusSuccess
-	statusCode := 201
+	statusCode := HTTPStatusCode(201)
 	body := `{"amount":1000,"password":"secret"}`
 	req := UpdateRequest{
 		SessionID:   "sess",
@@ -404,9 +471,7 @@ func TestUpdateDescriptionFallbackFromEventInfo(t *testing.T) {
 	if _, err := c.UpdateActivityLogSessionID(context.Background(), req); err != nil {
 		t.Fatalf("unexpected update error: %v", err)
 	}
-	if stub.lastUpdate == nil {
-		t.Fatalf("expected update payload to be captured")
-	}
+
 	if stub.lastUpdate.Description == nil {
 		t.Fatalf("expected description fallback to be set")
 	}
@@ -454,7 +519,7 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 		t.Fatalf("expected unauthorized error for unknown project filter, got %v", err)
 	}
 
-	req = GetRequest{StatusCodes: []int{200, 201}}
+	req = GetRequest{StatusCodes: []HTTPStatusCode{http.StatusOK, http.StatusCreated}}
 	if _, err := c.GetActivityLogs(context.Background(), 0, req); err != nil {
 		t.Fatalf("unexpected get error for status code filters: %v", err)
 	}
@@ -537,4 +602,15 @@ func TestGetEventCategories(t *testing.T) {
 
 func uintPtr(v uint) *uint {
 	return &v
+}
+
+func uintSlicePtrTest(v []uint) *[]uint {
+	return &v
+}
+
+func derefString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
 }

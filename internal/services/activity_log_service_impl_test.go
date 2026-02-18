@@ -26,20 +26,20 @@ type fakeRepo struct {
 	cats      []string
 }
 
-func (f *fakeRepo) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (f *fakeRepo) CreateActivityLogs(ctx context.Context, params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
 	f.createCalled = true
 	if f.createErr != nil {
 		return nil, f.createErr
 	}
-	return activity, nil
+	return &models.ActivityLog{SessionID: params.SessionID}, nil
 }
 
-func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, params repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error) {
 	f.updateCalled = true
 	if f.updateErr != nil {
 		return nil, f.updateErr
 	}
-	return activity, nil
+	return &models.ActivityLog{SessionID: params.SessionID}, nil
 }
 
 func (f *fakeRepo) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
@@ -62,13 +62,7 @@ func TestActivityLogServiceValidation(t *testing.T) {
 	repo := &fakeRepo{}
 	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
-	if _, err := svc.CreateActivityLogs(context.Background(), nil); err == nil {
-		t.Fatalf("expected error for nil activity")
-	}
-	if _, err := svc.UpdateActivityLogSessionID(context.Background(), nil); err == nil {
-		t.Fatalf("expected error for nil activity")
-	}
-	if _, err := svc.UpdateActivityLogSessionID(context.Background(), &models.ActivityLog{}); err == nil {
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), repositories.UpdateActivityLogSessionParams{}); err == nil {
 		t.Fatalf("expected error for empty session_id")
 	}
 }
@@ -81,15 +75,14 @@ func TestActivityLogServicePassThrough(t *testing.T) {
 	}
 	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
-	act := &models.ActivityLog{SessionID: "s1"}
-	if _, err := svc.CreateActivityLogs(context.Background(), act); err != nil {
+	if _, err := svc.CreateActivityLogs(context.Background(), repositories.CreateActivityLogParams{SessionID: "s1"}); err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 	if !repo.createCalled {
 		t.Fatalf("expected create to be called")
 	}
 
-	if _, err := svc.UpdateActivityLogSessionID(context.Background(), act); err != nil {
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), repositories.UpdateActivityLogSessionParams{SessionID: "s1"}); err != nil {
 		t.Fatalf("unexpected update error: %v", err)
 	}
 	if !repo.updateCalled {
@@ -122,10 +115,10 @@ func TestActivityLogServiceErrors(t *testing.T) {
 	}
 	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
-	if _, err := svc.CreateActivityLogs(context.Background(), &models.ActivityLog{}); err == nil {
+	if _, err := svc.CreateActivityLogs(context.Background(), repositories.CreateActivityLogParams{}); err == nil {
 		t.Fatalf("expected create error")
 	}
-	if _, err := svc.UpdateActivityLogSessionID(context.Background(), &models.ActivityLog{}); err == nil {
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), repositories.UpdateActivityLogSessionParams{SessionID: "s1"}); err == nil {
 		t.Fatalf("expected update error")
 	}
 	if _, _, err := svc.GetActivityLogs(context.Background(), repositories.ActivityLogFilters{}); err == nil {
@@ -133,5 +126,20 @@ func TestActivityLogServiceErrors(t *testing.T) {
 	}
 	if _, err := svc.GetEventCategories(context.Background()); err == nil {
 		t.Fatalf("expected categories error")
+	}
+}
+
+func TestActivityLogServiceStatusCodeValidation(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
+
+	invalid := 99
+	if _, err := svc.CreateActivityLogs(context.Background(), repositories.CreateActivityLogParams{StatusCode: &invalid}); err == nil {
+		t.Fatalf("expected create error for invalid status_code")
+	}
+
+	invalid = 700
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), repositories.UpdateActivityLogSessionParams{SessionID: "s1", StatusCode: &invalid}); err == nil {
+		t.Fatalf("expected update error for invalid status_code")
 	}
 }

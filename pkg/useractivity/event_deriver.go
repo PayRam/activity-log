@@ -3,6 +3,7 @@ package useractivity
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"unicode"
@@ -15,7 +16,7 @@ type EventDeriverInput struct {
 	Endpoint    string
 	Method      string
 	RequestBody *string
-	StatusCode  *int
+	StatusCode  *HTTPStatusCode
 	APIStatus   APIStatus
 }
 
@@ -391,20 +392,20 @@ func buildEventDescription(input EventDeriverInput, rawResource, action string) 
 	}
 }
 
-func resolveStatusCode(statusCode *int, apiStatus APIStatus) int {
+func resolveStatusCode(statusCode *HTTPStatusCode, apiStatus APIStatus) int {
 	if statusCode != nil {
-		return *statusCode
+		return int(*statusCode)
 	}
 
 	switch APIStatus(strings.ToUpper(strings.TrimSpace(string(apiStatus)))) {
 	case APIStatusError:
-		return 500
+		return http.StatusInternalServerError
 	case APIStatusDenied:
-		return 403
+		return http.StatusForbidden
 	case APIStatusSuccess:
-		return 200
+		return http.StatusOK
 	default:
-		return 200
+		return http.StatusOK
 	}
 }
 

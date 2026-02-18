@@ -24,6 +24,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/PayRam/activity-log/pkg/useractivity"
 	"go.uber.org/zap"
@@ -64,7 +65,7 @@ func run() error {
 	}
 
 	status := useractivity.APIStatusError
-	code := 500
+	code := useractivity.HTTPStatusCode(http.StatusInternalServerError)
 	msg := "downstream failed"
 	_, err = client.UpdateActivityLogSessionID(context.Background(), useractivity.UpdateRequest{
 		SessionID:   "session-123",
@@ -243,7 +244,7 @@ Required fields:
 Supported optional fields:
 
 - actor scope: `MemberID *uint`, `ProjectIDs []uint`
-- result: `StatusCode *int`, `Description *string`, `APIErrorMsg *string`
+- result: `StatusCode *HTTPStatusCode`, `Description *string`, `APIErrorMsg *string`
 - request info: `IPAddress *string`, `UserAgent *string`, `Referer *string`
 - payloads: `RequestBody *string`, `ResponseBody *string`, `Metadata *string`
 - classification: `Role *string`, `EventCategory *string`, `EventName *string`
@@ -284,9 +285,9 @@ Required field:
 
 Supported updatable fields:
 
-- actor scope: `MemberID *uint`, `ProjectIDs []uint`
+- actor scope: `MemberID *uint`, `ProjectIDs *[]uint`
 - route/action/status: `Method *string`, `Endpoint *string`, `APIAction *string`, `APIStatus *APIStatus`
-- result: `StatusCode *int`, `Description *string`, `APIErrorMsg *string`
+- result: `StatusCode *HTTPStatusCode`, `Description *string`, `APIErrorMsg *string`
 - request info: `IPAddress *string`, `UserAgent *string`, `Referer *string`
 - payloads: `RequestBody *string`, `ResponseBody *string`, `Metadata *string`
 - classification: `Role *string`, `EventCategory *string`, `EventName *string`
@@ -309,7 +310,7 @@ Core fields:
 | `Endpoint` | `string` / `*string` | `R` | `O` | Stored in DB as `api_part` |
 | `APIAction` | `string` / `*string` | `R` | `O` | Use constants (`READ/WRITE/DELETE`) |
 | `APIStatus` | `string` / `*string` | `R` | `O` | Use constants (`SUCCESS/DENIED/ERROR`) |
-| `StatusCode` | `*int` | `O` | `O` | HTTP or domain status code |
+| `StatusCode` | `*HTTPStatusCode` | `O` | `O` | Use `net/http` constants (for example `http.StatusOK`) |
 | `Description` | `*string` | `O` | `O` | Human-readable message |
 | `APIErrorMsg` | `*string` | `O` | `O` | Error text if any |
 
@@ -318,7 +319,7 @@ Actor and classification:
 | Field | Type | Create | Update | Notes |
 | --- | --- | --- | --- | --- |
 | `MemberID` | `*uint` | `O` | `O` | Actor member id |
-| `ProjectIDs` | `[]uint` | `O` | `O` | Project/platform scope |
+| `ProjectIDs` | `[]uint` / `*[]uint` | `O` | `O` | Create uses `[]uint`; Update uses `*[]uint` for nullable semantics |
 | `Role` | `*string` | `O` | `O` | Actor role |
 | `EventCategory` | `*string` | `O` | `O` | Event grouping |
 | `EventName` | `*string` | `O` | `O` | Event name |
@@ -350,8 +351,10 @@ Pointer semantics for update:
 
 - `nil` pointer field: no change
 - non-`nil` pointer field: update to provided value
-- `ProjectIDs == nil`: no change
-- `ProjectIDs != nil`: field is updated
+- update `ProjectIDs == nil`: no change
+- update `ProjectIDs != nil` and `*ProjectIDs == nil`: set DB value to `NULL`
+- update `ProjectIDs != nil` and `len(*ProjectIDs) == 0`: set empty JSON array (`[]`)
+- update `ProjectIDs != nil` and populated: set provided IDs
 
 Implementation detail:
 

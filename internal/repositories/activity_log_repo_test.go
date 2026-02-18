@@ -37,14 +37,14 @@ func TestActivityLogRepositoryCreate(t *testing.T) {
 	db := newPostgresDB(t)
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	activity := &models.ActivityLog{
+	params := CreateActivityLogParams{
 		SessionID: "sess-1",
 		Method:    "GET",
 		APIPart:   "/ping",
 		APIStatus: "SUCCESS",
 		APIAction: "READ",
 	}
-	created, err := repo.CreateActivityLogs(context.Background(), activity)
+	created, err := repo.CreateActivityLogs(context.Background(), params)
 	if err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
@@ -57,13 +57,13 @@ func TestActivityLogRepositoryListAndCategories(t *testing.T) {
 	db := newPostgresDB(t)
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	records := []models.ActivityLog{
+	records := []CreateActivityLogParams{
 		{SessionID: "s1", Method: "GET", APIPart: "/a", APIStatus: "SUCCESS", APIAction: "READ", EventCategory: strPtr("AUTH")},
 		{SessionID: "s2", Method: "POST", APIPart: "/b", APIStatus: "SUCCESS", APIAction: "WRITE", EventCategory: strPtr("PAYMENT")},
 		{SessionID: "s3", Method: "GET", APIPart: "/c", APIStatus: "SUCCESS", APIAction: "READ", EventCategory: strPtr("AUTH")},
 	}
 	for i := range records {
-		if _, err := repo.CreateActivityLogs(context.Background(), &records[i]); err != nil {
+		if _, err := repo.CreateActivityLogs(context.Background(), records[i]); err != nil {
 			t.Fatalf("create record: %v", err)
 		}
 	}
@@ -93,8 +93,8 @@ func TestActivityLogRepositoryUpdateMissingRecord(t *testing.T) {
 	db := newPostgresDB(t)
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	activity := &models.ActivityLog{SessionID: "missing-session"}
-	if _, err := repo.UpdateActivityLogSessionID(context.Background(), activity); err == nil {
+	params := UpdateActivityLogSessionParams{SessionID: "missing-session"}
+	if _, err := repo.UpdateActivityLogSessionID(context.Background(), params); err == nil {
 		t.Fatalf("expected error for missing session_id record")
 	}
 }
@@ -103,15 +103,52 @@ func TestActivityLogRepositoryUpdateDryRun(t *testing.T) {
 	db := newPostgresDB(t).Session(&gorm.Session{DryRun: true})
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	activity := &models.ActivityLog{
+	status := "SUCCESS"
+	action := "READ"
+	method := "GET"
+	apiPart := "/ping"
+	params := UpdateActivityLogSessionParams{
 		SessionID: "sess-1",
-		APIStatus: "SUCCESS",
-		APIAction: "READ",
-		Method:    "GET",
-		APIPart:   "/ping",
+		APIStatus: &status,
+		APIAction: &action,
+		Method:    &method,
+		APIPart:   &apiPart,
 	}
-	if _, err := repo.UpdateActivityLogSessionID(context.Background(), activity); err != nil {
+	if _, err := repo.UpdateActivityLogSessionID(context.Background(), params); err != nil {
 		t.Fatalf("expected no error in dry run, got %v", err)
+	}
+}
+
+func TestActivityLogRepositoryUpdateProjectIDsNullable(t *testing.T) {
+	db := newPostgresDB(t)
+	repo := NewActivityLogRepository(db, zap.NewNop())
+
+	projectIDs := []uint{7, 8}
+	created, err := repo.CreateActivityLogs(context.Background(), CreateActivityLogParams{
+		SessionID:  "sess-nullable",
+		Method:     "POST",
+		APIPart:    "/nullable",
+		APIStatus:  "SUCCESS",
+		APIAction:  "WRITE",
+		ProjectIDs: &projectIDs,
+	})
+	if err != nil {
+		t.Fatalf("create record: %v", err)
+	}
+	if created == nil {
+		t.Fatalf("expected created record")
+	}
+
+	var nilProjects []uint
+	updated, err := repo.UpdateActivityLogSessionID(context.Background(), UpdateActivityLogSessionParams{
+		SessionID:  "sess-nullable",
+		ProjectIDs: &nilProjects,
+	})
+	if err != nil {
+		t.Fatalf("update nullable project ids: %v", err)
+	}
+	if updated.ProjectIDs != nil {
+		t.Fatalf("expected project ids to be NULL, got %+v", updated.ProjectIDs)
 	}
 }
 

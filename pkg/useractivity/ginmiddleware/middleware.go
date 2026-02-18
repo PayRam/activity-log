@@ -152,12 +152,13 @@ func Middleware(cfg Config) gin.HandlerFunc {
 		apiStatus := useractivity.APIStatus(middleware.StatusToAPIStatus(status))
 		method := c.Request.Method
 		endpoint := c.Request.URL.Path
+		statusCode := useractivity.HTTPStatusCode(status)
 		updateReq := useractivity.UpdateRequest{
 			SessionID:   sessionID,
 			Method:      &method,
 			Endpoint:    &endpoint,
 			APIStatus:   &apiStatus,
-			StatusCode:  &status,
+			StatusCode:  &statusCode,
 			RequestBody: requestBody,
 		}
 		if cfg.CaptureResponseBody && body != "" {

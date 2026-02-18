@@ -153,12 +153,13 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 			apiStatus := useractivity.APIStatus(middleware.StatusToAPIStatus(status))
 			method := r.Method
 			endpoint := r.URL.Path
+			statusCode := useractivity.HTTPStatusCode(status)
 			updateReq := useractivity.UpdateRequest{
 				SessionID:   sessionID,
 				Method:      &method,
 				Endpoint:    &endpoint,
 				APIStatus:   &apiStatus,
-				StatusCode:  &status,
+				StatusCode:  &statusCode,
 				RequestBody: requestBody,
 			}
 			if cfg.CaptureResponseBody && body != "" {

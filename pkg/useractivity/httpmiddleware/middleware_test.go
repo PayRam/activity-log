@@ -46,7 +46,84 @@ func jsonRoundTripResponse(body string) *http.Response {
 	}
 }
 
-func (s *stubService) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func createActivityModelFromParams(params repositories.CreateActivityLogParams) *models.ActivityLog {
+	activity := &models.ActivityLog{
+		MemberID:      params.MemberID,
+		SessionID:     params.SessionID,
+		Method:        params.Method,
+		APIPart:       params.APIPart,
+		APIStatus:     params.APIStatus,
+		StatusCode:    params.StatusCode,
+		Description:   params.Description,
+		IPAddress:     params.IPAddress,
+		UserAgent:     params.UserAgent,
+		Referer:       params.Referer,
+		APIAction:     params.APIAction,
+		APIErrorMsg:   params.APIErrorMsg,
+		RequestBody:   params.RequestBody,
+		ResponseBody:  params.ResponseBody,
+		Metadata:      params.Metadata,
+		Role:          params.Role,
+		EventCategory: params.EventCategory,
+		EventName:     params.EventName,
+		Country:       params.Country,
+		CountryCode:   params.CountryCode,
+		Region:        params.Region,
+		City:          params.City,
+		Timezone:      params.Timezone,
+		Latitude:      params.Latitude,
+		Longitude:     params.Longitude,
+	}
+	if params.ProjectIDs != nil {
+		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+	}
+	return activity
+}
+
+func updateActivityModelFromParams(params repositories.UpdateActivityLogSessionParams) *models.ActivityLog {
+	activity := &models.ActivityLog{SessionID: params.SessionID}
+	if params.ProjectIDs != nil {
+		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+	}
+	if params.MemberID != nil {
+		activity.MemberID = params.MemberID
+	}
+	if params.Method != nil {
+		activity.Method = *params.Method
+	}
+	if params.APIPart != nil {
+		activity.APIPart = *params.APIPart
+	}
+	if params.APIAction != nil {
+		activity.APIAction = *params.APIAction
+	}
+	if params.APIStatus != nil {
+		activity.APIStatus = *params.APIStatus
+	}
+	activity.StatusCode = params.StatusCode
+	activity.Description = params.Description
+	activity.APIErrorMsg = params.APIErrorMsg
+	activity.IPAddress = params.IPAddress
+	activity.UserAgent = params.UserAgent
+	activity.Referer = params.Referer
+	activity.ResponseBody = params.ResponseBody
+	activity.Metadata = params.Metadata
+	activity.RequestBody = params.RequestBody
+	activity.Role = params.Role
+	activity.EventCategory = params.EventCategory
+	activity.EventName = params.EventName
+	activity.Country = params.Country
+	activity.CountryCode = params.CountryCode
+	activity.Region = params.Region
+	activity.City = params.City
+	activity.Timezone = params.Timezone
+	activity.Latitude = params.Latitude
+	activity.Longitude = params.Longitude
+	return activity
+}
+
+func (s *stubService) CreateActivityLogs(ctx context.Context, params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
+	activity := createActivityModelFromParams(params)
 	s.mu.Lock()
 	s.created = append(s.created, activity)
 	s.mu.Unlock()
@@ -59,7 +136,8 @@ func (s *stubService) CreateActivityLogs(ctx context.Context, activity *models.A
 	return activity, nil
 }
 
-func (s *stubService) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *stubService) UpdateActivityLogSessionID(ctx context.Context, params repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error) {
+	activity := updateActivityModelFromParams(params)
 	s.mu.Lock()
 	s.updated = append(s.updated, activity)
 	s.mu.Unlock()

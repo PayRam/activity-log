@@ -21,22 +21,22 @@ func NewActivityLogServiceImpl(repo repositories.ActivityLogRepository, logger *
 }
 
 // Create persists a new activity record.
-func (s *ActivityLogServiceImpl) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	if activity == nil {
-		return nil, fmt.Errorf("activity is nil")
+func (s *ActivityLogServiceImpl) CreateActivityLogs(ctx context.Context, params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
+	if params.StatusCode != nil && (*params.StatusCode < 100 || *params.StatusCode > 599) {
+		return nil, fmt.Errorf("status_code must be a valid HTTP status code")
 	}
-	return s.repo.CreateActivityLogs(ctx, activity)
+	return s.repo.CreateActivityLogs(ctx, params)
 }
 
 // UpdateActivityLogSessionID updates an activity record by session ID.
-func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	if activity == nil {
-		return nil, fmt.Errorf("activity is nil")
-	}
-	if activity.SessionID == "" {
+func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context, params repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error) {
+	if params.SessionID == "" {
 		return nil, fmt.Errorf("session_id is required")
 	}
-	return s.repo.UpdateActivityLogSessionID(ctx, activity)
+	if params.StatusCode != nil && (*params.StatusCode < 100 || *params.StatusCode > 599) {
+		return nil, fmt.Errorf("status_code must be a valid HTTP status code")
+	}
+	return s.repo.UpdateActivityLogSessionID(ctx, params)
 }
 
 // Get retrieves activities with filtering.

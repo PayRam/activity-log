@@ -46,3 +46,16 @@ func ErrorToAPIStatus(err error) APIStatus {
 	}
 	return APIStatusError
 }
+
+// HTTPStatusCode is a typed HTTP status code used by the public API.
+type HTTPStatusCode int
+
+// IsValid returns true for valid HTTP status code ranges.
+func (c HTTPStatusCode) IsValid() bool {
+	return c >= 100 && c <= 599
+}
+
+// Int converts the typed status code to int.
+func (c HTTPStatusCode) Int() int {
+	return int(c)
+}

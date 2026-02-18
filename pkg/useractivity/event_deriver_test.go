@@ -49,7 +49,7 @@ func TestNewCoreLikeEventDeriver_Fallback(t *testing.T) {
 }
 
 func TestDefaultEventInfoDeriver_Description(t *testing.T) {
-	statusCode := 201
+	statusCode := HTTPStatusCode(201)
 	body := `{"amount":1000,"password":"secret"}`
 
 	info := DefaultEventInfoDeriver(EventDeriverInput{
@@ -73,7 +73,7 @@ func TestDefaultEventInfoDeriver_Description(t *testing.T) {
 }
 
 func TestNewCoreLikeEventInfoDeriver_TableMatch(t *testing.T) {
-	statusCode := 200
+	statusCode := HTTPStatusCode(200)
 	deriver := NewCoreLikeEventInfoDeriver(CoreLikeEventDeriverConfig{
 		BasePath:   "/api/v1",
 		TableNames: []string{"members", "payment_requests"},

@@ -111,14 +111,14 @@ func (c *Client) CreateActivityLogs(ctx context.Context, req CreateRequest) (*Ac
 
 	applyEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
-	activity := &models.ActivityLog{
+	params := repositories.CreateActivityLogParams{
 		MemberID:      req.MemberID,
 		SessionID:     req.SessionID,
-		ProjectIDs:    models.UintSlice(req.ProjectIDs),
+		ProjectIDs:    uintSlicePtr(req.ProjectIDs),
 		Method:        req.Method,
 		APIPart:       req.Endpoint,
 		APIStatus:     string(req.APIStatus),
-		StatusCode:    req.StatusCode,
+		StatusCode:    statusCodePtrToInt(req.StatusCode),
 		Description:   req.Description,
 		IPAddress:     req.IPAddress,
 		UserAgent:     req.UserAgent,
@@ -140,7 +140,7 @@ func (c *Client) CreateActivityLogs(ctx context.Context, req CreateRequest) (*Ac
 		Longitude:     req.Longitude,
 	}
 
-	created, err := c.svc.CreateActivityLogs(ctx, activity)
+	created, err := c.svc.CreateActivityLogs(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -158,10 +158,14 @@ func (c *Client) UpdateActivityLogSessionID(ctx context.Context, req UpdateReque
 
 	applyUpdateEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
-	activity := &models.ActivityLog{
+	params := repositories.UpdateActivityLogSessionParams{
 		SessionID:     req.SessionID,
+		ProjectIDs:    cloneUintSlicePtr(req.ProjectIDs),
 		MemberID:      req.MemberID,
-		StatusCode:    req.StatusCode,
+		Method:        req.Method,
+		APIPart:       req.Endpoint,
+		APIAction:     req.APIAction,
+		StatusCode:    statusCodePtrToInt(req.StatusCode),
 		Description:   req.Description,
 		IPAddress:     req.IPAddress,
 		UserAgent:     req.UserAgent,
@@ -181,24 +185,12 @@ func (c *Client) UpdateActivityLogSessionID(ctx context.Context, req UpdateReque
 		Latitude:      req.Latitude,
 		Longitude:     req.Longitude,
 	}
-
-	if req.ProjectIDs != nil {
-		activity.ProjectIDs = models.UintSlice(req.ProjectIDs)
-	}
-	if req.Method != nil {
-		activity.Method = *req.Method
-	}
-	if req.Endpoint != nil {
-		activity.APIPart = *req.Endpoint
-	}
 	if req.APIStatus != nil {
-		activity.APIStatus = string(*req.APIStatus)
-	}
-	if req.APIAction != nil {
-		activity.APIAction = *req.APIAction
+		status := string(*req.APIStatus)
+		params.APIStatus = &status
 	}
 
-	updated, err := c.svc.UpdateActivityLogSessionID(ctx, activity)
+	updated, err := c.svc.UpdateActivityLogSessionID(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +224,7 @@ func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequ
 		EventNames:      req.EventNames,
 		EventCategories: req.EventCategories,
 		Search:          req.Search,
-		StatusCodes:     req.StatusCodes,
+		StatusCodes:     statusCodesToInts(req.StatusCodes),
 		IPAddresses:     req.IPAddresses,
 		Countries:       req.Countries,
 		Roles:           req.Roles,
@@ -393,7 +385,7 @@ func toActivity(model *models.ActivityLog) *Activity {
 		Method:        model.Method,
 		APIPart:       model.APIPart,
 		APIStatus:     APIStatus(model.APIStatus),
-		StatusCode:    model.StatusCode,
+		StatusCode:    statusCodePtrFromInt(model.StatusCode),
 		Description:   model.Description,
 		IPAddress:     model.IPAddress,
 		UserAgent:     model.UserAgent,
@@ -512,6 +504,55 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 	}
 
 	return GetResponse{Activities: activities, TotalCount: total}, nil
+}
+
+func statusCodePtrToInt(code *HTTPStatusCode) *int {
+	if code == nil {
+		return nil
+	}
+	value := int(*code)
+	return &value
+}
+
+func statusCodePtrFromInt(code *int) *HTTPStatusCode {
+	if code == nil {
+		return nil
+	}
+	value := HTTPStatusCode(*code)
+	return &value
+}
+
+func statusCodesToInts(codes []HTTPStatusCode) []int {
+	if len(codes) == 0 {
+		return nil
+	}
+	values := make([]int, 0, len(codes))
+	for _, code := range codes {
+		values = append(values, int(code))
+	}
+	return values
+}
+
+func uintSlicePtr(values []uint) *[]uint {
+	if values == nil {
+		return nil
+	}
+	out := make([]uint, len(values))
+	copy(out, values)
+	return &out
+}
+
+func cloneUintSlicePtr(values *[]uint) *[]uint {
+	if values == nil {
+		return nil
+	}
+	if *values == nil {
+		var nilSlice []uint
+		return &nilSlice
+	}
+	out := make([]uint, len(*values))
+	copy(out, *values)
+	return &out
 }
 
 func apiStatusesToStrings(statuses []APIStatus) []string {
