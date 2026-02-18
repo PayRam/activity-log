@@ -22,6 +22,7 @@ type Config struct {
 	EventDeriver     EventDeriver
 	EventInfoDeriver EventInfoDeriver
 
+	Provider        Provider
 	AccessResolver  AccessResolver
 	ConfigProvider  ConfigProvider
 	MemberResolver  MemberResolver
@@ -36,6 +37,7 @@ type Client struct {
 	eventDeriver     EventDeriver
 	eventInfoDeriver EventInfoDeriver
 
+	provider        Provider
 	accessResolver  AccessResolver
 	configProvider  ConfigProvider
 	memberResolver  MemberResolver
@@ -70,6 +72,7 @@ func New(cfg Config) (*Client, error) {
 		logger:           logger,
 		eventDeriver:     cfg.EventDeriver,
 		eventInfoDeriver: cfg.EventInfoDeriver,
+		provider:         cfg.Provider,
 		accessResolver:   cfg.AccessResolver,
 		configProvider:   cfg.ConfigProvider,
 		memberResolver:   cfg.MemberResolver,
@@ -207,8 +210,8 @@ func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequ
 		return GetResponse{}, ErrBadRequest
 	}
 
-	if memberID > 0 && c.accessResolver != nil {
-		access, err := c.accessResolver.Resolve(ctx, memberID)
+	if memberID > 0 {
+		access, err := c.resolveAccess(ctx, memberID)
 		if err != nil {
 			return GetResponse{}, err
 		}
@@ -248,10 +251,8 @@ func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequ
 
 	limit := DefaultGetLimit
 	if req.Export {
-		if c.configProvider != nil {
-			if exportLimit, ok, err := c.configProvider.GetInt(ctx, ConfigKeyActivityLogExportLimit); err == nil && ok && exportLimit > 0 {
-				limit = exportLimit
-			}
+		if exportLimit, ok, err := c.getConfigInt(ctx, ConfigKeyActivityLogExportLimit); err == nil && ok && exportLimit > 0 {
+			limit = exportLimit
 		}
 	}
 
@@ -468,21 +469,25 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 	projectIDs := internalutils.CollectProjectIDs(modelsList)
 
 	memberInfoMap := map[uint]MemberInfo{}
-	if c.memberResolver != nil && len(memberIDs) > 0 {
-		info, err := c.memberResolver.GetByIDs(ctx, memberIDs)
+	if len(memberIDs) > 0 {
+		info, err := c.getMembersByIDs(ctx, memberIDs)
 		if err != nil {
 			return GetResponse{}, err
 		}
-		memberInfoMap = info
+		if info != nil {
+			memberInfoMap = info
+		}
 	}
 
 	projectInfoMap := map[uint]ProjectInfo{}
-	if c.projectResolver != nil && len(projectIDs) > 0 {
-		info, err := c.projectResolver.GetByIDs(ctx, projectIDs)
+	if len(projectIDs) > 0 {
+		info, err := c.getProjectsByIDs(ctx, projectIDs)
 		if err != nil {
 			return GetResponse{}, err
 		}
-		projectInfoMap = info
+		if info != nil {
+			projectInfoMap = info
+		}
 	}
 
 	for _, model := range modelsList {
@@ -578,4 +583,56 @@ func apiStatusesToStrings(statuses []APIStatus) []string {
 		return nil
 	}
 	return values
+}
+
+func (c *Client) resolveAccess(ctx context.Context, memberID uint) (*AccessContext, error) {
+	if c == nil || memberID == 0 {
+		return nil, nil
+	}
+	if c.provider != nil {
+		return c.provider.ResolveAccess(ctx, memberID)
+	}
+	if c.accessResolver != nil {
+		return c.accessResolver.Resolve(ctx, memberID)
+	}
+	return nil, nil
+}
+
+func (c *Client) getConfigInt(ctx context.Context, key string) (int, bool, error) {
+	if c == nil || key == "" {
+		return 0, false, nil
+	}
+	if c.provider != nil {
+		return c.provider.GetInt(ctx, key)
+	}
+	if c.configProvider != nil {
+		return c.configProvider.GetInt(ctx, key)
+	}
+	return 0, false, nil
+}
+
+func (c *Client) getMembersByIDs(ctx context.Context, ids []uint) (map[uint]MemberInfo, error) {
+	if c == nil || len(ids) == 0 {
+		return nil, nil
+	}
+	if c.provider != nil {
+		return c.provider.GetMembersByIDs(ctx, ids)
+	}
+	if c.memberResolver != nil {
+		return c.memberResolver.GetByIDs(ctx, ids)
+	}
+	return nil, nil
+}
+
+func (c *Client) getProjectsByIDs(ctx context.Context, ids []uint) (map[uint]ProjectInfo, error) {
+	if c == nil || len(ids) == 0 {
+		return nil, nil
+	}
+	if c.provider != nil {
+		return c.provider.GetProjectsByIDs(ctx, ids)
+	}
+	if c.projectResolver != nil {
+		return c.projectResolver.GetByIDs(ctx, ids)
+	}
+	return nil, nil
 }

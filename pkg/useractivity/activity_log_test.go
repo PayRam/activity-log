@@ -163,6 +163,18 @@ type stubPlatformResolver struct {
 	err  error
 }
 
+type stubUnifiedProvider struct {
+	access      *AccessContext
+	accessErr   error
+	configVal   int
+	configOK    bool
+	configErr   error
+	members     map[uint]MemberInfo
+	membersErr  error
+	projects    map[uint]ProjectInfo
+	projectsErr error
+}
+
 func newDryRunPostgresDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
@@ -201,6 +213,31 @@ func (r *stubPlatformResolver) GetByIDs(ctx context.Context, ids []uint) (map[ui
 		return nil, r.err
 	}
 	return r.data, nil
+}
+
+func (p *stubUnifiedProvider) ResolveAccess(ctx context.Context, memberID uint) (*AccessContext, error) {
+	if p.accessErr != nil {
+		return nil, p.accessErr
+	}
+	return p.access, nil
+}
+
+func (p *stubUnifiedProvider) GetInt(ctx context.Context, key string) (int, bool, error) {
+	return p.configVal, p.configOK, p.configErr
+}
+
+func (p *stubUnifiedProvider) GetMembersByIDs(ctx context.Context, ids []uint) (map[uint]MemberInfo, error) {
+	if p.membersErr != nil {
+		return nil, p.membersErr
+	}
+	return p.members, nil
+}
+
+func (p *stubUnifiedProvider) GetProjectsByIDs(ctx context.Context, ids []uint) (map[uint]ProjectInfo, error) {
+	if p.projectsErr != nil {
+		return nil, p.projectsErr
+	}
+	return p.projects, nil
 }
 
 func TestNewRequiresDB(t *testing.T) {
@@ -262,6 +299,27 @@ func TestNewUsesProjectResolverFallback(t *testing.T) {
 	got, ok := client.projectResolver.(*stubPlatformResolver)
 	if !ok || got != projectResolver {
 		t.Fatalf("expected resolver fallback to use provided ProjectResolver")
+	}
+}
+
+func TestNewUsesProvider(t *testing.T) {
+	db := newDryRunPostgresDB(t)
+	provider := &stubUnifiedProvider{}
+
+	client, err := New(Config{
+		DB:       db,
+		Provider: provider,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if client.provider == nil {
+		t.Fatalf("expected provider to be set")
+	}
+	got, ok := client.provider.(*stubUnifiedProvider)
+	if !ok || got != provider {
+		t.Fatalf("expected Provider to be used")
 	}
 }
 
@@ -606,6 +664,53 @@ func TestGetDateHandlingAndResolvers(t *testing.T) {
 	}
 	if len(resp.Activities[0].Projects) != 1 {
 		t.Fatalf("expected project resolver to populate project info")
+	}
+}
+
+func TestGetWithUnifiedProvider(t *testing.T) {
+	start := time.Now().Add(-time.Hour)
+
+	stub := &stubService{
+		getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+			return []models.ActivityLog{
+				{
+					BaseModel:  models.BaseModel{ID: 1},
+					SessionID:  "s1",
+					ProjectIDs: models.UintSlice{2},
+					MemberID:   uintPtr(5),
+				},
+			}, 1, nil
+		},
+	}
+
+	c := &Client{
+		svc: stub,
+		provider: &stubUnifiedProvider{
+			access:    &AccessContext{IsAdmin: false, AllowedProjectIDs: []uint{2}},
+			configVal: 7,
+			configOK:  true,
+			members:   map[uint]MemberInfo{5: {ID: 5, Name: "A"}},
+			projects:  map[uint]ProjectInfo{2: {ID: 2, Name: "P"}},
+		},
+	}
+
+	filterAll := ProjectFilterAll
+	req := GetRequest{
+		ProjectFilter: &filterAll,
+		Export:        true,
+		PaginationConditions: PaginationConditions{
+			StartDate: &start,
+		},
+	}
+	resp, err := c.GetActivityLogs(context.Background(), 10, req)
+	if err != nil {
+		t.Fatalf("unexpected get error: %v", err)
+	}
+	if stub.lastFilter.Limit == nil || *stub.lastFilter.Limit != 7 {
+		t.Fatalf("expected export limit from provider, got %+v", stub.lastFilter.Limit)
+	}
+	if len(resp.Activities) != 1 || resp.Activities[0].Member == nil || len(resp.Activities[0].Projects) != 1 {
+		t.Fatalf("expected provider hydration to populate member/projects")
 	}
 }
 

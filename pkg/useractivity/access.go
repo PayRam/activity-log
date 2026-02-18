@@ -27,3 +27,12 @@ type MemberResolver interface {
 type ProjectResolver interface {
 	GetByIDs(ctx context.Context, ids []uint) (map[uint]ProjectInfo, error)
 }
+
+// Provider is a unified adapter for access, config, and hydration lookups.
+// Implement this to avoid wiring separate resolver/provider interfaces.
+type Provider interface {
+	ResolveAccess(ctx context.Context, memberID uint) (*AccessContext, error)
+	GetInt(ctx context.Context, key string) (int, bool, error)
+	GetMembersByIDs(ctx context.Context, ids []uint) (map[uint]MemberInfo, error)
+	GetProjectsByIDs(ctx context.Context, ids []uint) (map[uint]ProjectInfo, error)
+}
