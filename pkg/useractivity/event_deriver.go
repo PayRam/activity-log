@@ -16,7 +16,7 @@ type EventDeriverInput struct {
 	Method      string
 	RequestBody *string
 	StatusCode  *int
-	APIStatus   string
+	APIStatus   APIStatus
 }
 
 // EventDeriver derives (eventCategory, eventName) from request context.
@@ -391,12 +391,12 @@ func buildEventDescription(input EventDeriverInput, rawResource, action string) 
 	}
 }
 
-func resolveStatusCode(statusCode *int, apiStatus string) int {
+func resolveStatusCode(statusCode *int, apiStatus APIStatus) int {
 	if statusCode != nil {
 		return *statusCode
 	}
 
-	switch strings.ToUpper(strings.TrimSpace(apiStatus)) {
+	switch APIStatus(strings.ToUpper(strings.TrimSpace(string(apiStatus)))) {
 	case APIStatusError:
 		return 500
 	case APIStatusDenied:

@@ -37,10 +37,6 @@ func TestActivityLogRepositoryCreate(t *testing.T) {
 	db := newPostgresDB(t)
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	if _, err := repo.Create(context.Background(), nil); err == nil {
-		t.Fatalf("expected error for nil activity")
-	}
-
 	activity := &models.ActivityLog{
 		SessionID: "sess-1",
 		Method:    "GET",
@@ -48,7 +44,7 @@ func TestActivityLogRepositoryCreate(t *testing.T) {
 		APIStatus: "SUCCESS",
 		APIAction: "READ",
 	}
-	created, err := repo.Create(context.Background(), activity)
+	created, err := repo.CreateActivityLogs(context.Background(), activity)
 	if err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
@@ -67,7 +63,7 @@ func TestActivityLogRepositoryListAndCategories(t *testing.T) {
 		{SessionID: "s3", Method: "GET", APIPart: "/c", APIStatus: "SUCCESS", APIAction: "READ", EventCategory: strPtr("AUTH")},
 	}
 	for i := range records {
-		if _, err := repo.Create(context.Background(), &records[i]); err != nil {
+		if _, err := repo.CreateActivityLogs(context.Background(), &records[i]); err != nil {
 			t.Fatalf("create record: %v", err)
 		}
 	}
@@ -93,17 +89,13 @@ func TestActivityLogRepositoryListAndCategories(t *testing.T) {
 	}
 }
 
-func TestActivityLogRepositoryUpdateValidation(t *testing.T) {
+func TestActivityLogRepositoryUpdateMissingRecord(t *testing.T) {
 	db := newPostgresDB(t)
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	if _, err := repo.UpdateBySessionID(context.Background(), nil); err == nil {
-		t.Fatalf("expected error for nil activity")
-	}
-
-	activity := &models.ActivityLog{}
-	if _, err := repo.UpdateBySessionID(context.Background(), activity); err == nil {
-		t.Fatalf("expected error for empty session_id")
+	activity := &models.ActivityLog{SessionID: "missing-session"}
+	if _, err := repo.UpdateActivityLogSessionID(context.Background(), activity); err == nil {
+		t.Fatalf("expected error for missing session_id record")
 	}
 }
 
@@ -118,7 +110,7 @@ func TestActivityLogRepositoryUpdateDryRun(t *testing.T) {
 		Method:    "GET",
 		APIPart:   "/ping",
 	}
-	if _, err := repo.UpdateBySessionID(context.Background(), activity); err != nil {
+	if _, err := repo.UpdateActivityLogSessionID(context.Background(), activity); err != nil {
 		t.Fatalf("expected no error in dry run, got %v", err)
 	}
 }

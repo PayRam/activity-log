@@ -24,7 +24,7 @@ type stubService struct {
 	lastUpdate   *models.ActivityLog
 }
 
-func (s *stubService) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *stubService) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.lastCreate = activity
 	if s.createFn != nil {
 		return s.createFn(activity)
@@ -32,7 +32,7 @@ func (s *stubService) Create(ctx context.Context, activity *models.ActivityLog) 
 	return activity, nil
 }
 
-func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *stubService) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.lastUpdate = activity
 	if s.updateFn != nil {
 		return s.updateFn(activity)
@@ -40,7 +40,7 @@ func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.Ac
 	return activity, nil
 }
 
-func (s *stubService) Get(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+func (s *stubService) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	s.lastFilter = filter
 	if s.getFn != nil {
 		return s.getFn(filter)
@@ -193,24 +193,24 @@ func TestAutoMigrate(t *testing.T) {
 func TestCreateValidation(t *testing.T) {
 	c := &Client{svc: &stubService{}}
 
-	if _, err := c.Create(context.Background(), CreateRequest{}); err == nil {
+	if _, err := c.CreateActivityLogs(context.Background(), CreateRequest{}); err == nil {
 		t.Fatalf("expected error for missing session_id")
 	}
 
 	req := CreateRequest{SessionID: "s"}
-	if _, err := c.Create(context.Background(), req); err == nil {
+	if _, err := c.CreateActivityLogs(context.Background(), req); err == nil {
 		t.Fatalf("expected error for missing method")
 	}
 	req.Method = "GET"
-	if _, err := c.Create(context.Background(), req); err == nil {
+	if _, err := c.CreateActivityLogs(context.Background(), req); err == nil {
 		t.Fatalf("expected error for missing endpoint")
 	}
 	req.Endpoint = "/x"
-	if _, err := c.Create(context.Background(), req); err == nil {
+	if _, err := c.CreateActivityLogs(context.Background(), req); err == nil {
 		t.Fatalf("expected error for missing api_action")
 	}
 	req.APIAction = "READ"
-	if _, err := c.Create(context.Background(), req); err == nil {
+	if _, err := c.CreateActivityLogs(context.Background(), req); err == nil {
 		t.Fatalf("expected error for missing api_status")
 	}
 }
@@ -226,15 +226,15 @@ func TestCreateMapping(t *testing.T) {
 
 	memberID := uint(7)
 	req := CreateRequest{
-		MemberID:            &memberID,
-		SessionID:           "sess",
-		ExternalPlatformIDs: []uint{1, 2},
-		Method:              "POST",
-		Endpoint:            "/test",
-		APIAction:           "WRITE",
-		APIStatus:           "SUCCESS",
+		MemberID:   &memberID,
+		SessionID:  "sess",
+		ProjectIDs: []uint{1, 2},
+		Method:     "POST",
+		Endpoint:   "/test",
+		APIAction:  "WRITE",
+		APIStatus:  APIStatusSuccess,
 	}
-	act, err := c.Create(context.Background(), req)
+	act, err := c.CreateActivityLogs(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestCreateEventFallbackFromEndpoint(t *testing.T) {
 		APIStatus: APIStatusSuccess,
 	}
 
-	if _, err := c.Create(context.Background(), req); err != nil {
+	if _, err := c.CreateActivityLogs(context.Background(), req); err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 	if stub.lastCreate == nil {
@@ -294,7 +294,7 @@ func TestCreateUsesConfiguredEventDeriver(t *testing.T) {
 		APIAction: APIActionRead,
 		APIStatus: APIStatusSuccess,
 	}
-	if _, err := c.Create(context.Background(), req); err != nil {
+	if _, err := c.CreateActivityLogs(context.Background(), req); err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 
@@ -329,7 +329,7 @@ func TestCreateUsesConfiguredEventInfoDeriver(t *testing.T) {
 		APIAction: APIActionRead,
 		APIStatus: APIStatusSuccess,
 	}
-	if _, err := c.Create(context.Background(), req); err != nil {
+	if _, err := c.CreateActivityLogs(context.Background(), req); err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 
@@ -349,7 +349,7 @@ func TestCreateUsesConfiguredEventInfoDeriver(t *testing.T) {
 
 func TestUpdateValidationAndMapping(t *testing.T) {
 	c := &Client{svc: &stubService{}}
-	if _, err := c.Update(context.Background(), UpdateRequest{}); err == nil {
+	if _, err := c.UpdateActivityLogSessionID(context.Background(), UpdateRequest{}); err == nil {
 		t.Fatalf("expected error for missing session_id")
 	}
 
@@ -362,17 +362,17 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 
 	method := "PUT"
 	endpoint := "/update"
-	apiStatus := "SUCCESS"
+	apiStatus := APIStatusSuccess
 	apiAction := "WRITE"
 	req := UpdateRequest{
-		SessionID:           "sess",
-		ExternalPlatformIDs: []uint{9},
-		Method:              &method,
-		Endpoint:            &endpoint,
-		APIStatus:           &apiStatus,
-		APIAction:           &apiAction,
+		SessionID:  "sess",
+		ProjectIDs: []uint{9},
+		Method:     &method,
+		Endpoint:   &endpoint,
+		APIStatus:  &apiStatus,
+		APIAction:  &apiAction,
 	}
-	if _, err := c.Update(context.Background(), req); err != nil {
+	if _, err := c.UpdateActivityLogSessionID(context.Background(), req); err != nil {
 		t.Fatalf("unexpected update error: %v", err)
 	}
 	if stub.lastUpdate == nil || stub.lastUpdate.Method != method {
@@ -401,7 +401,7 @@ func TestUpdateDescriptionFallbackFromEventInfo(t *testing.T) {
 		StatusCode:  &statusCode,
 		RequestBody: &body,
 	}
-	if _, err := c.Update(context.Background(), req); err != nil {
+	if _, err := c.UpdateActivityLogSessionID(context.Background(), req); err != nil {
 		t.Fatalf("unexpected update error: %v", err)
 	}
 	if stub.lastUpdate == nil {
@@ -433,29 +433,29 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 
 	projectFilter := "ALL"
 	req := GetRequest{ProjectFilter: &projectFilter, Export: true}
-	if _, err := c.Get(context.Background(), 5, req); err != nil {
+	if _, err := c.GetActivityLogs(context.Background(), 5, req); err != nil {
 		t.Fatalf("unexpected get error: %v", err)
 	}
 	if stub.lastFilter.Limit == nil || *stub.lastFilter.Limit != 10 {
 		t.Fatalf("expected limit capped to export limit")
 	}
-	if len(stub.lastFilter.ExternalPlatformIDs) != 2 {
+	if len(stub.lastFilter.ProjectIDs) != 2 {
 		t.Fatalf("expected access scope to set external platform IDs")
 	}
 
-	req = GetRequest{ExternalPlatformIDs: []uint{3}}
-	if _, err := c.Get(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
+	req = GetRequest{ProjectIDs: []uint{3}}
+	if _, err := c.GetActivityLogs(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized error, got %v", err)
 	}
 
 	unknownFilter := "SOMETHING_ELSE"
 	req = GetRequest{ProjectFilter: &unknownFilter}
-	if _, err := c.Get(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
+	if _, err := c.GetActivityLogs(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected unauthorized error for unknown project filter, got %v", err)
 	}
 
 	req = GetRequest{StatusCodes: []int{200, 201}}
-	if _, err := c.Get(context.Background(), 0, req); err != nil {
+	if _, err := c.GetActivityLogs(context.Background(), 0, req); err != nil {
 		t.Fatalf("unexpected get error for status code filters: %v", err)
 	}
 	if len(stub.lastFilter.StatusCodes) != 2 || stub.lastFilter.StatusCodes[0] != 200 || stub.lastFilter.StatusCodes[1] != 201 {
@@ -471,10 +471,10 @@ func TestGetDateHandlingAndResolvers(t *testing.T) {
 		getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 			return []models.ActivityLog{
 				{
-					BaseModel:           models.BaseModel{ID: 1},
-					SessionID:           "s1",
-					ExternalPlatformIDs: models.UintSlice{2},
-					MemberID:            uintPtr(5),
+					BaseModel:  models.BaseModel{ID: 1},
+					SessionID:  "s1",
+					ProjectIDs: models.UintSlice{2},
+					MemberID:   uintPtr(5),
 				},
 			}, 1, nil
 		},
@@ -487,7 +487,7 @@ func TestGetDateHandlingAndResolvers(t *testing.T) {
 	}
 
 	req := GetRequest{PaginationConditions: PaginationConditions{StartDate: &start, EndDate: &future}}
-	resp, err := c.Get(context.Background(), 0, req)
+	resp, err := c.GetActivityLogs(context.Background(), 0, req)
 	if err != nil {
 		t.Fatalf("unexpected get error: %v", err)
 	}
@@ -513,7 +513,7 @@ func TestGetResolverErrors(t *testing.T) {
 		memberResolver: &stubMemberResolver{err: errors.New("resolver")},
 	}
 
-	if _, err := c.Get(context.Background(), 0, GetRequest{}); err == nil {
+	if _, err := c.GetActivityLogs(context.Background(), 0, GetRequest{}); err == nil {
 		t.Fatalf("expected resolver error")
 	}
 }

@@ -52,7 +52,7 @@ func run() error {
 		return err
 	}
 
-	_, err = client.Create(context.Background(), useractivity.CreateRequest{
+	_, err = client.CreateActivityLogs(context.Background(), useractivity.CreateRequest{
 		SessionID: "session-123",
 		Method:    "POST",
 		Endpoint:  "/api/v1/payment-request",
@@ -66,7 +66,7 @@ func run() error {
 	status := useractivity.APIStatusError
 	code := 500
 	msg := "downstream failed"
-	_, err = client.Update(context.Background(), useractivity.UpdateRequest{
+	_, err = client.UpdateActivityLogSessionID(context.Background(), useractivity.UpdateRequest{
 		SessionID:   "session-123",
 		APIStatus:   &status,
 		StatusCode:  &code,
@@ -147,14 +147,14 @@ Common mapping:
 
 | Library field | Your app (example) |
 | --- | --- |
-| `ExternalPlatformIDs` | `ProjectIDs` |
+| `ProjectIDs` | `ProjectIDs` |
 | `ExternalPlatformResolver` | `ProjectResolver` |
 | `AccessContext.AllowedProjectIDs` | IDs of projects user can access |
 | `ProjectFilter` | project-scope filter behavior |
 
 Practical integration rule:
 
-- Treat `ExternalPlatformIDs` as the scope IDs from your domain model.
+- Treat `ProjectIDs` as the scope IDs from your domain model.
 - Keep your domain naming internally.
 - Add a thin adapter only at integration boundaries.
 
@@ -218,19 +218,19 @@ Request mapping example:
 
 ```go
 projectID := uint(101)
-_, err := client.Create(ctx, useractivity.CreateRequest{
+_, err := client.CreateActivityLogs(ctx, useractivity.CreateRequest{
 	SessionID:           "s-1",
 	Method:              "POST",
 	Endpoint:            "/payments",
 	APIAction:           useractivity.APIActionWrite,
 	APIStatus:           useractivity.APIStatusSuccess,
-	ExternalPlatformIDs: []uint{projectID}, // project scope in your app
+	ProjectIDs: []uint{projectID}, // project scope in your app
 })
 ```
 
 ## API Reference
 
-### `Create(ctx, CreateRequest)` (store)
+### `CreateActivityLogs(ctx, CreateRequest)` (store)
 
 Required fields:
 
@@ -238,11 +238,11 @@ Required fields:
 - `Method string`
 - `Endpoint string`
 - `APIAction string`
-- `APIStatus string`
+- `APIStatus APIStatus`
 
 Supported optional fields:
 
-- actor scope: `MemberID *uint`, `ExternalPlatformIDs []uint`
+- actor scope: `MemberID *uint`, `ProjectIDs []uint`
 - result: `StatusCode *int`, `Description *string`, `APIErrorMsg *string`
 - request info: `IPAddress *string`, `UserAgent *string`, `Referer *string`
 - payloads: `RequestBody *string`, `ResponseBody *string`, `Metadata *string`
@@ -252,7 +252,7 @@ Supported optional fields:
 Notes:
 
 - `Endpoint` is stored in DB field `api_part`.
-- `ExternalPlatformIDs` is stored as JSON/JSONB array.
+- `ProjectIDs` is stored as JSON/JSONB array.
 - if `EventCategory` / `EventName` are not provided, library falls back to URL segment after `/api/v1/` (for example `/api/v1/payment-request` -> `payment-request`)
 - if `Config.EventInfoDeriver` is provided, it is used first for category/name/description fallback
 - if `Config.EventDeriver` is provided, it is used for category/name fallback when event info deriver does not provide those values
@@ -276,7 +276,7 @@ client, err := useractivity.New(useractivity.Config{
 })
 ```
 
-### `Update(ctx, UpdateRequest)`
+### `UpdateActivityLogSessionID(ctx, UpdateRequest)`
 
 Required field:
 
@@ -284,8 +284,8 @@ Required field:
 
 Supported updatable fields:
 
-- actor scope: `MemberID *uint`, `ExternalPlatformIDs []uint`
-- route/action/status: `Method *string`, `Endpoint *string`, `APIAction *string`, `APIStatus *string`
+- actor scope: `MemberID *uint`, `ProjectIDs []uint`
+- route/action/status: `Method *string`, `Endpoint *string`, `APIAction *string`, `APIStatus *APIStatus`
 - result: `StatusCode *int`, `Description *string`, `APIErrorMsg *string`
 - request info: `IPAddress *string`, `UserAgent *string`, `Referer *string`
 - payloads: `RequestBody *string`, `ResponseBody *string`, `Metadata *string`
@@ -318,7 +318,7 @@ Actor and classification:
 | Field | Type | Create | Update | Notes |
 | --- | --- | --- | --- | --- |
 | `MemberID` | `*uint` | `O` | `O` | Actor member id |
-| `ExternalPlatformIDs` | `[]uint` | `O` | `O` | Project/platform scope |
+| `ProjectIDs` | `[]uint` | `O` | `O` | Project/platform scope |
 | `Role` | `*string` | `O` | `O` | Actor role |
 | `EventCategory` | `*string` | `O` | `O` | Event grouping |
 | `EventName` | `*string` | `O` | `O` | Event name |
@@ -350,20 +350,20 @@ Pointer semantics for update:
 
 - `nil` pointer field: no change
 - non-`nil` pointer field: update to provided value
-- `ExternalPlatformIDs == nil`: no change
-- `ExternalPlatformIDs != nil`: field is updated
+- `ProjectIDs == nil`: no change
+- `ProjectIDs != nil`: field is updated
 
 Implementation detail:
 
 - update is by `session_id`, inside a DB transaction with row lock
 - GORM struct updates omit zero values for non-pointer fields
 
-### `Get(ctx, memberID, GetRequest)`
+### `GetActivityLogs(ctx, memberID, GetRequest)`
 
 Supported filters:
 
-- arrays: `StatusCodes` (query key: `statusCode` repeated), `EventCategories`, `Methods`, `EventNames`, `IDS`, `MemberIDs`, `ExternalPlatformIDs`, `APIStatuses`, `IPAddresses`, `Countries`, `Roles`
-- exact/single: `Search`, `SessionID`, `ProjectFilter`
+- arrays: `StatusCodes` (query key: `statusCode` repeated), `EventCategories`, `Methods`, `EventNames`, `IDS`, `MemberIDs`, `ProjectIDs`, `SessionIDs`, `APIStatuses`, `IPAddresses`, `Countries`, `Roles`
+- exact/single: `Search`, `ProjectFilter`
 - pagination/time: `Limit`, `Offset`, `SortBy`, `Order`, `GreaterThanID`, `LessThanID`, `CreatedAfter`, `CreatedBefore`, `UpdatedAfter`, `UpdatedBefore`, `StartDate`, `EndDate`
 - internal flag: `Export`
 
@@ -371,7 +371,7 @@ Behavior:
 
 - default `Limit` is `100`
 - export mode can use config key `user.activity.export.limit`
-- if both `ExternalPlatformIDs` and `ProjectFilter` are set, request is rejected
+- if both `ProjectIDs` and `ProjectFilter` are set, request is rejected
 - if `AccessResolver` is configured, non-admin scope is enforced
 - supported `ProjectFilter` values are `ALL` and `NO_IDS`
 - unknown `ProjectFilter` values are rejected as unauthorized
@@ -529,7 +529,7 @@ err := tracker.Track(ctx, useractivity.ServiceOperation{
 	MemberID:  &memberID,
 	APIAction: useractivity.APIActionWrite,
 }, func(ctx context.Context) error {
-	return repo.Create(ctx, memberID)
+	return repo.CreateActivityLogs(ctx, memberID)
 })
 ```
 
@@ -547,7 +547,7 @@ err := tracker.Track(ctx, useractivity.ServiceOperation{
 - `Name string`
 - `SessionID string`
 - `MemberID *uint`
-- `ExternalPlatformIDs []uint`
+- `ProjectIDs []uint`
 - `Method string`
 - `Endpoint string`
 - `APIAction string`

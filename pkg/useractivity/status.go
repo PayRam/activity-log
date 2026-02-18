@@ -2,11 +2,16 @@ package useractivity
 
 import "errors"
 
-const (
-	APIStatusSuccess = "SUCCESS"
-	APIStatusDenied  = "DENIED"
-	APIStatusError   = "ERROR"
+// APIStatus is the enum for API execution outcomes.
+type APIStatus string
 
+const (
+	APIStatusSuccess APIStatus = "SUCCESS"
+	APIStatusDenied  APIStatus = "DENIED"
+	APIStatusError   APIStatus = "ERROR"
+)
+
+const (
 	APIActionRead    = "READ"
 	APIActionWrite   = "WRITE"
 	APIActionDelete  = "DELETE"
@@ -16,8 +21,23 @@ const (
 	DefaultServiceEndpoint = "service"
 )
 
+// String returns the string form of the status.
+func (s APIStatus) String() string {
+	return string(s)
+}
+
+// IsValid returns true when the status value is one of the supported enums.
+func (s APIStatus) IsValid() bool {
+	switch s {
+	case APIStatusSuccess, APIStatusDenied, APIStatusError:
+		return true
+	default:
+		return false
+	}
+}
+
 // ErrorToAPIStatus maps a service-level error to an API status.
-func ErrorToAPIStatus(err error) string {
+func ErrorToAPIStatus(err error) APIStatus {
 	if err == nil {
 		return APIStatusSuccess
 	}

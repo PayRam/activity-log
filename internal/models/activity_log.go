@@ -17,21 +17,21 @@ type ActivityLog struct {
 	MemberID *uint `gorm:"index"`
 
 	// API request details
-	SessionID           string    `gorm:"size:100;index"`
-	ExternalPlatformIDs UintSlice `gorm:"type:jsonb"`
-	Method              string    `gorm:"size:10;not null"`
-	APIPart             string    `gorm:"size:255;not null"`
-	APIStatus           string    `gorm:"size:50;index;not null"`
-	StatusCode          *int      `gorm:"index"`
-	Description         *string   `gorm:"size:255"`
-	IPAddress           *string   `gorm:"size:50"`
-	UserAgent           *string   `gorm:"size:500"`
-	Referer             *string   `gorm:"size:500"`
-	APIAction           string    `gorm:"size:100;index;not null"`
-	APIErrorMsg         *string   `gorm:"size:1000"`
-	RequestBody         *string   `gorm:"type:text"`
-	ResponseBody        *string   `gorm:"type:text"`
-	Metadata            *string   `gorm:"type:json"`
+	SessionID    string    `gorm:"size:100;index"`
+	ProjectIDs   UintSlice `gorm:"column:external_platform_ids;type:jsonb"`
+	Method       string    `gorm:"size:10;not null"`
+	APIPart      string    `gorm:"size:255;not null"`
+	APIStatus    string    `gorm:"size:50;index;not null"`
+	StatusCode   *int      `gorm:"index"`
+	Description  *string   `gorm:"size:255"`
+	IPAddress    *string   `gorm:"size:50"`
+	UserAgent    *string   `gorm:"size:500"`
+	Referer      *string   `gorm:"size:500"`
+	APIAction    string    `gorm:"size:100;index;not null"`
+	APIErrorMsg  *string   `gorm:"size:1000"`
+	RequestBody  *string   `gorm:"type:text"`
+	ResponseBody *string   `gorm:"type:text"`
+	Metadata     *string   `gorm:"type:json"`
 
 	// Activity classification
 	Role          *string `gorm:"size:100;index"`

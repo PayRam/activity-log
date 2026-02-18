@@ -105,7 +105,7 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 				Method:      r.Method,
 				Endpoint:    r.URL.Path,
 				APIAction:   middleware.MethodToAction(r.Method),
-				APIStatus:   "SUCCESS",
+				APIStatus:   useractivity.APIStatusSuccess,
 				RequestBody: requestBody,
 			}
 
@@ -129,13 +129,13 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 			created := true
 			if cfg.Async {
 				go func() {
-					_, err := cfg.Client.Create(context.Background(), createReq)
+					_, err := cfg.Client.CreateActivityLogs(context.Background(), createReq)
 					if err != nil {
 						handleError(cfg, logger, err)
 					}
 				}()
 			} else {
-				if _, err := cfg.Client.Create(ctx, createReq); err != nil {
+				if _, err := cfg.Client.CreateActivityLogs(ctx, createReq); err != nil {
 					handleError(cfg, logger, err)
 					created = false
 				}
@@ -150,7 +150,7 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 			status := recorder.Status()
 			body := recorder.Body()
-			apiStatus := middleware.StatusToAPIStatus(status)
+			apiStatus := useractivity.APIStatus(middleware.StatusToAPIStatus(status))
 			method := r.Method
 			endpoint := r.URL.Path
 			updateReq := useractivity.UpdateRequest{
@@ -173,7 +173,7 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 			if cfg.Async {
 				go func() {
-					_, err := cfg.Client.Update(context.Background(), updateReq)
+					_, err := cfg.Client.UpdateActivityLogSessionID(context.Background(), updateReq)
 					if err != nil {
 						handleError(cfg, logger, err)
 					}
@@ -181,7 +181,7 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 				return
 			}
 
-			if _, err := cfg.Client.Update(ctx, updateReq); err != nil {
+			if _, err := cfg.Client.UpdateActivityLogSessionID(ctx, updateReq); err != nil {
 				handleError(cfg, logger, err)
 			}
 		})

@@ -17,11 +17,11 @@ func CollectMemberIDs(list []models.ActivityLog) []uint {
 	return idMapToSlice(idSet)
 }
 
-// CollectExternalPlatformIDs returns a distinct external platform ID list.
-func CollectExternalPlatformIDs(list []models.ActivityLog) []uint {
+// CollectProjectIDs returns a distinct project ID list.
+func CollectProjectIDs(list []models.ActivityLog) []uint {
 	idSet := make(map[uint]struct{})
 	for _, activity := range list {
-		for _, id := range activity.ExternalPlatformIDs {
+		for _, id := range activity.ProjectIDs {
 			idSet[id] = struct{}{}
 		}
 	}

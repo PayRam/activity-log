@@ -26,7 +26,7 @@ type fakeRepo struct {
 	cats      []string
 }
 
-func (f *fakeRepo) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (f *fakeRepo) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	f.createCalled = true
 	if f.createErr != nil {
 		return nil, f.createErr
@@ -34,7 +34,7 @@ func (f *fakeRepo) Create(ctx context.Context, activity *models.ActivityLog) (*m
 	return activity, nil
 }
 
-func (f *fakeRepo) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	f.updateCalled = true
 	if f.updateErr != nil {
 		return nil, f.updateErr
@@ -62,11 +62,14 @@ func TestActivityLogServiceValidation(t *testing.T) {
 	repo := &fakeRepo{}
 	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
-	if _, err := svc.Create(context.Background(), nil); err == nil {
+	if _, err := svc.CreateActivityLogs(context.Background(), nil); err == nil {
 		t.Fatalf("expected error for nil activity")
 	}
-	if _, err := svc.UpdateBySessionID(context.Background(), nil); err == nil {
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), nil); err == nil {
 		t.Fatalf("expected error for nil activity")
+	}
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), &models.ActivityLog{}); err == nil {
+		t.Fatalf("expected error for empty session_id")
 	}
 }
 
@@ -79,21 +82,21 @@ func TestActivityLogServicePassThrough(t *testing.T) {
 	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
 	act := &models.ActivityLog{SessionID: "s1"}
-	if _, err := svc.Create(context.Background(), act); err != nil {
+	if _, err := svc.CreateActivityLogs(context.Background(), act); err != nil {
 		t.Fatalf("unexpected create error: %v", err)
 	}
 	if !repo.createCalled {
 		t.Fatalf("expected create to be called")
 	}
 
-	if _, err := svc.UpdateBySessionID(context.Background(), act); err != nil {
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), act); err != nil {
 		t.Fatalf("unexpected update error: %v", err)
 	}
 	if !repo.updateCalled {
 		t.Fatalf("expected update to be called")
 	}
 
-	activities, total, err := svc.Get(context.Background(), repositories.ActivityLogFilters{})
+	activities, total, err := svc.GetActivityLogs(context.Background(), repositories.ActivityLogFilters{})
 	if err != nil {
 		t.Fatalf("unexpected activities error: %v", err)
 	}
@@ -119,13 +122,13 @@ func TestActivityLogServiceErrors(t *testing.T) {
 	}
 	svc := NewActivityLogServiceImpl(repo, zap.NewNop())
 
-	if _, err := svc.Create(context.Background(), &models.ActivityLog{}); err == nil {
+	if _, err := svc.CreateActivityLogs(context.Background(), &models.ActivityLog{}); err == nil {
 		t.Fatalf("expected create error")
 	}
-	if _, err := svc.UpdateBySessionID(context.Background(), &models.ActivityLog{}); err == nil {
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), &models.ActivityLog{}); err == nil {
 		t.Fatalf("expected update error")
 	}
-	if _, _, err := svc.Get(context.Background(), repositories.ActivityLogFilters{}); err == nil {
+	if _, _, err := svc.GetActivityLogs(context.Background(), repositories.ActivityLogFilters{}); err == nil {
 		t.Fatalf("expected list error")
 	}
 	if _, err := svc.GetEventCategories(context.Background()); err == nil {

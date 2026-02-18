@@ -21,23 +21,26 @@ func NewActivityLogServiceImpl(repo repositories.ActivityLogRepository, logger *
 }
 
 // Create persists a new activity record.
-func (s *ActivityLogServiceImpl) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *ActivityLogServiceImpl) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	if activity == nil {
 		return nil, fmt.Errorf("activity is nil")
 	}
-	return s.repo.Create(ctx, activity)
+	return s.repo.CreateActivityLogs(ctx, activity)
 }
 
-// UpdateBySessionID updates an activity record by session ID.
-func (s *ActivityLogServiceImpl) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+// UpdateActivityLogSessionID updates an activity record by session ID.
+func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	if activity == nil {
 		return nil, fmt.Errorf("activity is nil")
 	}
-	return s.repo.UpdateBySessionID(ctx, activity)
+	if activity.SessionID == "" {
+		return nil, fmt.Errorf("session_id is required")
+	}
+	return s.repo.UpdateActivityLogSessionID(ctx, activity)
 }
 
 // Get retrieves activities with filtering.
-func (s *ActivityLogServiceImpl) Get(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+func (s *ActivityLogServiceImpl) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	return s.repo.GetActivityLogs(ctx, filter)
 }
 

@@ -11,18 +11,18 @@ import (
 
 // ServiceOperation describes a service/repository operation to track.
 type ServiceOperation struct {
-	Name                string
-	SessionID           string
-	MemberID            *uint
-	ExternalPlatformIDs []uint
-	Method              string
-	Endpoint            string
-	APIAction           string
-	Description         *string
-	Metadata            *string
-	Role                *string
-	EventCategory       *string
-	EventName           *string
+	Name          string
+	SessionID     string
+	MemberID      *uint
+	ProjectIDs    []uint
+	Method        string
+	Endpoint      string
+	APIAction     string
+	Description   *string
+	Metadata      *string
+	Role          *string
+	EventCategory *string
+	EventName     *string
 }
 
 // ServiceResult captures the outcome of a tracked operation.
@@ -130,18 +130,18 @@ func (t *ServiceTracker) Track(ctx context.Context, op ServiceOperation, fn func
 	})
 
 	createReq := CreateRequest{
-		SessionID:           sessionID,
-		MemberID:            op.MemberID,
-		ExternalPlatformIDs: op.ExternalPlatformIDs,
-		Method:              method,
-		Endpoint:            endpoint,
-		APIAction:           action,
-		APIStatus:           APIStatusSuccess,
-		Description:         op.Description,
-		Metadata:            metadata,
-		Role:                op.Role,
-		EventCategory:       op.EventCategory,
-		EventName:           op.EventName,
+		SessionID:     sessionID,
+		MemberID:      op.MemberID,
+		ProjectIDs:    op.ProjectIDs,
+		Method:        method,
+		Endpoint:      endpoint,
+		APIAction:     action,
+		APIStatus:     APIStatusSuccess,
+		Description:   op.Description,
+		Metadata:      metadata,
+		Role:          op.Role,
+		EventCategory: op.EventCategory,
+		EventName:     op.EventName,
 	}
 
 	if t.createEnricher != nil {
@@ -151,12 +151,12 @@ func (t *ServiceTracker) Track(ctx context.Context, op ServiceOperation, fn func
 	created := true
 	if t.async {
 		go func() {
-			if _, err := t.client.Create(context.Background(), createReq); err != nil {
+			if _, err := t.client.CreateActivityLogs(context.Background(), createReq); err != nil {
 				t.handleError(err)
 			}
 		}()
 	} else {
-		if _, err := t.client.Create(ctx, createReq); err != nil {
+		if _, err := t.client.CreateActivityLogs(ctx, createReq); err != nil {
 			t.handleError(err)
 			created = false
 		}
@@ -170,7 +170,7 @@ func (t *ServiceTracker) Track(ctx context.Context, op ServiceOperation, fn func
 
 	status := ErrorToAPIStatus(opErr)
 	finalStep := currentStep
-	finalStep.Status = status
+	finalStep.Status = string(status)
 	finalTrail := append(slices.Clone(baseTrail), finalStep)
 
 	updateReq := UpdateRequest{
@@ -190,14 +190,14 @@ func (t *ServiceTracker) Track(ctx context.Context, op ServiceOperation, fn func
 
 	if t.async {
 		go func(req UpdateRequest) {
-			if _, err := t.client.Update(context.Background(), req); err != nil {
+			if _, err := t.client.UpdateActivityLogSessionID(context.Background(), req); err != nil {
 				t.handleError(err)
 			}
 		}(updateReq)
 		return opErr
 	}
 
-	if _, err := t.client.Update(ctx, updateReq); err != nil {
+	if _, err := t.client.UpdateActivityLogSessionID(ctx, updateReq); err != nil {
 		t.handleError(err)
 	}
 

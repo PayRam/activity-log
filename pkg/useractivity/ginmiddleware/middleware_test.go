@@ -47,7 +47,7 @@ func jsonRoundTripResponse(body string) *http.Response {
 	}
 }
 
-func (s *stubService) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *stubService) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.created = append(s.created, activity)
 	s.mu.Unlock()
@@ -60,7 +60,7 @@ func (s *stubService) Create(ctx context.Context, activity *models.ActivityLog) 
 	return activity, nil
 }
 
-func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *stubService) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.updated = append(s.updated, activity)
 	s.mu.Unlock()
@@ -73,7 +73,7 @@ func (s *stubService) UpdateBySessionID(ctx context.Context, activity *models.Ac
 	return activity, nil
 }
 
-func (s *stubService) Get(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+func (s *stubService) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	return nil, 0, nil
 }
 
@@ -114,7 +114,7 @@ func TestMiddlewareCaptureAndEnrich(t *testing.T) {
 			return "1.2.3.4"
 		},
 		CreateEnricher: func(c *gin.Context, req *useractivity.CreateRequest) {
-			req.APIStatus = "SUCCESS"
+			req.APIStatus = useractivity.APIStatusSuccess
 		},
 		UpdateEnricher: func(c *gin.Context, req *useractivity.UpdateRequest, resp *CapturedResponse) {
 			if resp != nil && resp.StatusCode == http.StatusCreated {

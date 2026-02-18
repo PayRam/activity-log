@@ -20,7 +20,7 @@ type trackerStubService struct {
 	updated []*models.ActivityLog
 }
 
-func (s *trackerStubService) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *trackerStubService) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.created = append(s.created, activity)
 	s.mu.Unlock()
@@ -30,7 +30,7 @@ func (s *trackerStubService) Create(ctx context.Context, activity *models.Activi
 	return activity, nil
 }
 
-func (s *trackerStubService) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (s *trackerStubService) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	s.mu.Lock()
 	s.updated = append(s.updated, activity)
 	s.mu.Unlock()
@@ -40,7 +40,7 @@ func (s *trackerStubService) UpdateBySessionID(ctx context.Context, activity *mo
 	return activity, nil
 }
 
-func (s *trackerStubService) Get(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+func (s *trackerStubService) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
 	return nil, 0, nil
 }
 
@@ -88,7 +88,7 @@ func TestServiceTrackerTrackSuccess(t *testing.T) {
 	}
 
 	updated := stub.updated[0]
-	if updated.APIStatus != APIStatusSuccess {
+	if updated.APIStatus != string(APIStatusSuccess) {
 		t.Fatalf("expected update status %q, got %q", APIStatusSuccess, updated.APIStatus)
 	}
 	if updated.SessionID != created.SessionID {
@@ -99,7 +99,7 @@ func TestServiceTrackerTrackSuccess(t *testing.T) {
 	if updated.Metadata == nil || json.Unmarshal([]byte(*updated.Metadata), &updateMetadata) != nil {
 		t.Fatalf("expected valid update metadata")
 	}
-	if len(updateMetadata.OperationTrail) != 1 || updateMetadata.OperationTrail[0].Status != APIStatusSuccess {
+	if len(updateMetadata.OperationTrail) != 1 || updateMetadata.OperationTrail[0].Status != string(APIStatusSuccess) {
 		t.Fatalf("expected final trail status %q", APIStatusSuccess)
 	}
 }
@@ -118,7 +118,7 @@ func TestServiceTrackerTrackErrorAndUnauthorized(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected operation error")
 	}
-	if len(stub.updated) == 0 || stub.updated[0].APIStatus != APIStatusError {
+	if len(stub.updated) == 0 || stub.updated[0].APIStatus != string(APIStatusError) {
 		t.Fatalf("expected update status %q", APIStatusError)
 	}
 
@@ -134,7 +134,7 @@ func TestServiceTrackerTrackErrorAndUnauthorized(t *testing.T) {
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected ErrUnauthorized")
 	}
-	if len(stub.updated) == 0 || stub.updated[0].APIStatus != APIStatusDenied {
+	if len(stub.updated) == 0 || stub.updated[0].APIStatus != string(APIStatusDenied) {
 		t.Fatalf("expected update status %q", APIStatusDenied)
 	}
 }

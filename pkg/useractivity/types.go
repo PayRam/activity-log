@@ -10,21 +10,21 @@ type Activity struct {
 
 	MemberID *uint
 
-	SessionID           string
-	ExternalPlatformIDs []uint
-	Method              string
-	APIPart             string
-	APIStatus           string
-	StatusCode          *int
-	Description         *string
-	IPAddress           *string
-	UserAgent           *string
-	Referer             *string
-	APIAction           string
-	APIErrorMsg         *string
-	RequestBody         *string
-	ResponseBody        *string
-	Metadata            *string
+	SessionID    string
+	ProjectIDs   []uint
+	Method       string
+	APIPart      string
+	APIStatus    APIStatus
+	StatusCode   *int
+	Description  *string
+	IPAddress    *string
+	UserAgent    *string
+	Referer      *string
+	APIAction    string
+	APIErrorMsg  *string
+	RequestBody  *string
+	ResponseBody *string
+	Metadata     *string
 
 	Role          *string
 	EventCategory *string
@@ -44,22 +44,22 @@ type Activity struct {
 
 // CreateRequest defines the fields for creating a new activity record.
 type CreateRequest struct {
-	MemberID            *uint
-	SessionID           string
-	ExternalPlatformIDs []uint
-	Method              string
-	Endpoint            string
-	APIAction           string
-	APIStatus           string
-	StatusCode          *int
-	Description         *string
-	APIErrorMsg         *string
-	IPAddress           *string
-	UserAgent           *string
-	Referer             *string
-	RequestBody         *string
-	ResponseBody        *string
-	Metadata            *string
+	MemberID     *uint
+	SessionID    string
+	ProjectIDs   []uint
+	Method       string
+	Endpoint     string
+	APIAction    string
+	APIStatus    APIStatus
+	StatusCode   *int
+	Description  *string
+	APIErrorMsg  *string
+	IPAddress    *string
+	UserAgent    *string
+	Referer      *string
+	RequestBody  *string
+	ResponseBody *string
+	Metadata     *string
 
 	Role          *string
 	EventCategory *string
@@ -76,22 +76,22 @@ type CreateRequest struct {
 
 // UpdateRequest defines the fields for updating an activity record by session ID.
 type UpdateRequest struct {
-	SessionID           string
-	ExternalPlatformIDs []uint
-	MemberID            *uint
-	Method              *string
-	Endpoint            *string
-	APIAction           *string
-	APIStatus           *string
-	StatusCode          *int
-	Description         *string
-	APIErrorMsg         *string
-	IPAddress           *string
-	UserAgent           *string
-	Referer             *string
-	ResponseBody        *string
-	Metadata            *string
-	RequestBody         *string
+	SessionID    string
+	ProjectIDs   []uint
+	MemberID     *uint
+	Method       *string
+	Endpoint     *string
+	APIAction    *string
+	APIStatus    *APIStatus
+	StatusCode   *int
+	Description  *string
+	APIErrorMsg  *string
+	IPAddress    *string
+	UserAgent    *string
+	Referer      *string
+	ResponseBody *string
+	Metadata     *string
+	RequestBody  *string
 
 	Role          *string
 	EventCategory *string
@@ -139,20 +139,20 @@ type PaginationConditions struct {
 
 // GetRequest defines filters for getting activity logs.
 type GetRequest struct {
-	StatusCodes         []int    `form:"statusCode"`
-	Search              *string  `form:"search"`
-	SessionID           *string  `form:"sessionID"`
-	EventCategories     []string `form:"eventCategories"`
-	Methods             []string `form:"methods"`
-	EventNames          []string `form:"eventNames"`
-	IDS                 []uint   `form:"ids"`
-	MemberIDs           []uint   `form:"memberIDs"`
-	ExternalPlatformIDs []uint   `form:"externalPlatformIDs"`
-	ProjectFilter       *string  `form:"projectFilter"`
-	APIStatuses         []string `form:"apiStatuses"`
-	IPAddresses         []string `form:"ipAddresses"`
-	Countries           []string `form:"countries"`
-	Roles               []string `form:"roles"`
+	StatusCodes     []int       `form:"statusCode"`
+	Search          *string     `form:"search"`
+	SessionIDs      []string    `form:"sessionIDs"`
+	EventCategories []string    `form:"eventCategories"`
+	Methods         []string    `form:"methods"`
+	EventNames      []string    `form:"eventNames"`
+	IDS             []uint      `form:"ids"`
+	MemberIDs       []uint      `form:"memberIDs"`
+	ProjectIDs      []uint      `form:"projectIDs"`
+	ProjectFilter   *string     `form:"projectFilter"`
+	APIStatuses     []APIStatus `form:"apiStatuses"`
+	IPAddresses     []string    `form:"ipAddresses"`
+	Countries       []string    `form:"countries"`
+	Roles           []string    `form:"roles"`
 
 	Export bool `form:"-"`
 

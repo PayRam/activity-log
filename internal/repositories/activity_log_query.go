@@ -10,20 +10,20 @@ import (
 
 // ActivityLogFilters defines filter options for listing activities.
 type ActivityLogFilters struct {
-	SessionID           *string
-	Search              *string
-	StatusCodes         []int
-	IDS                 []uint
-	MemberIDs           []uint
-	Methods             []string
-	APIStatuses         []string
-	EventCategories     []string
-	EventNames          []string
-	IPAddresses         []string
-	Countries           []string
-	Roles               []string
-	ExternalPlatformIDs []uint
-	ProjectFilter       *string
+	SessionIDs      []string
+	Search          *string
+	StatusCodes     []int
+	IDS             []uint
+	MemberIDs       []uint
+	Methods         []string
+	APIStatuses     []string
+	EventCategories []string
+	EventNames      []string
+	IPAddresses     []string
+	Countries       []string
+	Roles           []string
+	ProjectIDs      []uint
+	ProjectFilter   *string
 
 	Limit         *int
 	Offset        *int
@@ -103,8 +103,8 @@ func ApplyActivityLogGetFilters(query *gorm.DB, filter ActivityLogFilters) *gorm
 			searchPattern, searchPattern, searchPattern,
 			searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
 	}
-	if filter.SessionID != nil {
-		query = query.Where(fmt.Sprintf("%s.session_id = ?", tableName), *filter.SessionID)
+	if len(filter.SessionIDs) > 0 {
+		query = query.Where(fmt.Sprintf("%s.session_id IN ?", tableName), filter.SessionIDs)
 	}
 
 	if len(filter.IPAddresses) > 0 {
@@ -124,8 +124,8 @@ func ApplyActivityLogGetFilters(query *gorm.DB, filter ActivityLogFilters) *gorm
 		case "ALL":
 			query = query.Where("(external_platform_ids IS NOT NULL AND external_platform_ids::jsonb != '[]'::jsonb AND external_platform_ids::jsonb != 'null'::jsonb)")
 		}
-	} else if len(filter.ExternalPlatformIDs) > 0 {
-		for _, id := range filter.ExternalPlatformIDs {
+	} else if len(filter.ProjectIDs) > 0 {
+		for _, id := range filter.ProjectIDs {
 			query = query.Where("external_platform_ids::jsonb @> ?::jsonb", fmt.Sprintf("[%d]", id))
 		}
 	}

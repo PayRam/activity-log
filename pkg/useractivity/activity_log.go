@@ -89,7 +89,7 @@ func (c *Client) AutoMigrate(ctx context.Context) error {
 }
 
 // Create inserts a new activity log record.
-func (c *Client) Create(ctx context.Context, req CreateRequest) (*Activity, error) {
+func (c *Client) CreateActivityLogs(ctx context.Context, req CreateRequest) (*Activity, error) {
 	if c == nil || c.svc == nil {
 		return nil, fmt.Errorf("client is not initialized")
 	}
@@ -112,35 +112,35 @@ func (c *Client) Create(ctx context.Context, req CreateRequest) (*Activity, erro
 	applyEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
 	activity := &models.ActivityLog{
-		MemberID:            req.MemberID,
-		SessionID:           req.SessionID,
-		ExternalPlatformIDs: models.UintSlice(req.ExternalPlatformIDs),
-		Method:              req.Method,
-		APIPart:             req.Endpoint,
-		APIStatus:           req.APIStatus,
-		StatusCode:          req.StatusCode,
-		Description:         req.Description,
-		IPAddress:           req.IPAddress,
-		UserAgent:           req.UserAgent,
-		Referer:             req.Referer,
-		APIAction:           req.APIAction,
-		APIErrorMsg:         req.APIErrorMsg,
-		RequestBody:         req.RequestBody,
-		ResponseBody:        req.ResponseBody,
-		Metadata:            req.Metadata,
-		Role:                req.Role,
-		EventCategory:       req.EventCategory,
-		EventName:           req.EventName,
-		Country:             req.Country,
-		CountryCode:         req.CountryCode,
-		Region:              req.Region,
-		City:                req.City,
-		Timezone:            req.Timezone,
-		Latitude:            req.Latitude,
-		Longitude:           req.Longitude,
+		MemberID:      req.MemberID,
+		SessionID:     req.SessionID,
+		ProjectIDs:    models.UintSlice(req.ProjectIDs),
+		Method:        req.Method,
+		APIPart:       req.Endpoint,
+		APIStatus:     string(req.APIStatus),
+		StatusCode:    req.StatusCode,
+		Description:   req.Description,
+		IPAddress:     req.IPAddress,
+		UserAgent:     req.UserAgent,
+		Referer:       req.Referer,
+		APIAction:     req.APIAction,
+		APIErrorMsg:   req.APIErrorMsg,
+		RequestBody:   req.RequestBody,
+		ResponseBody:  req.ResponseBody,
+		Metadata:      req.Metadata,
+		Role:          req.Role,
+		EventCategory: req.EventCategory,
+		EventName:     req.EventName,
+		Country:       req.Country,
+		CountryCode:   req.CountryCode,
+		Region:        req.Region,
+		City:          req.City,
+		Timezone:      req.Timezone,
+		Latitude:      req.Latitude,
+		Longitude:     req.Longitude,
 	}
 
-	created, err := c.svc.Create(ctx, activity)
+	created, err := c.svc.CreateActivityLogs(ctx, activity)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (c *Client) Create(ctx context.Context, req CreateRequest) (*Activity, erro
 }
 
 // Update updates an existing activity record by session ID.
-func (c *Client) Update(ctx context.Context, req UpdateRequest) (*Activity, error) {
+func (c *Client) UpdateActivityLogSessionID(ctx context.Context, req UpdateRequest) (*Activity, error) {
 	if c == nil || c.svc == nil {
 		return nil, fmt.Errorf("client is not initialized")
 	}
@@ -182,8 +182,8 @@ func (c *Client) Update(ctx context.Context, req UpdateRequest) (*Activity, erro
 		Longitude:     req.Longitude,
 	}
 
-	if req.ExternalPlatformIDs != nil {
-		activity.ExternalPlatformIDs = models.UintSlice(req.ExternalPlatformIDs)
+	if req.ProjectIDs != nil {
+		activity.ProjectIDs = models.UintSlice(req.ProjectIDs)
 	}
 	if req.Method != nil {
 		activity.Method = *req.Method
@@ -192,13 +192,13 @@ func (c *Client) Update(ctx context.Context, req UpdateRequest) (*Activity, erro
 		activity.APIPart = *req.Endpoint
 	}
 	if req.APIStatus != nil {
-		activity.APIStatus = *req.APIStatus
+		activity.APIStatus = string(*req.APIStatus)
 	}
 	if req.APIAction != nil {
 		activity.APIAction = *req.APIAction
 	}
 
-	updated, err := c.svc.UpdateBySessionID(ctx, activity)
+	updated, err := c.svc.UpdateActivityLogSessionID(ctx, activity)
 	if err != nil {
 		return nil, err
 	}
@@ -206,12 +206,12 @@ func (c *Client) Update(ctx context.Context, req UpdateRequest) (*Activity, erro
 }
 
 // Get retrieves activity logs with filtering and access controls.
-func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetResponse, error) {
+func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequest) (GetResponse, error) {
 	if c == nil || c.svc == nil {
 		return GetResponse{}, fmt.Errorf("client is not initialized")
 	}
 
-	if len(req.ExternalPlatformIDs) > 0 && req.ProjectFilter != nil {
+	if len(req.ProjectIDs) > 0 && req.ProjectFilter != nil {
 		return GetResponse{}, ErrBadRequest
 	}
 
@@ -226,32 +226,32 @@ func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetRes
 	}
 
 	filter := repositories.ActivityLogFilters{
-		IDS:                 req.IDS,
-		APIStatuses:         req.APIStatuses,
-		Methods:             req.Methods,
-		EventNames:          req.EventNames,
-		EventCategories:     req.EventCategories,
-		Search:              req.Search,
-		StatusCodes:         req.StatusCodes,
-		IPAddresses:         req.IPAddresses,
-		Countries:           req.Countries,
-		Roles:               req.Roles,
-		MemberIDs:           req.MemberIDs,
-		SessionID:           req.SessionID,
-		ExternalPlatformIDs: req.ExternalPlatformIDs,
-		ProjectFilter:       req.ProjectFilter,
-		Limit:               req.PaginationConditions.Limit,
-		Offset:              req.PaginationConditions.Offset,
-		StartDate:           req.PaginationConditions.StartDate,
-		EndDate:             req.PaginationConditions.EndDate,
-		SortBy:              req.PaginationConditions.SortBy,
-		Order:               req.PaginationConditions.Order,
-		GreaterThanID:       req.PaginationConditions.GreaterThanID,
-		LessThanID:          req.PaginationConditions.LessThanID,
-		CreatedAfter:        req.PaginationConditions.CreatedAfter,
-		CreatedBefore:       req.PaginationConditions.CreatedBefore,
-		UpdatedAfter:        req.PaginationConditions.UpdatedAfter,
-		UpdatedBefore:       req.PaginationConditions.UpdatedBefore,
+		IDS:             req.IDS,
+		APIStatuses:     apiStatusesToStrings(req.APIStatuses),
+		Methods:         req.Methods,
+		EventNames:      req.EventNames,
+		EventCategories: req.EventCategories,
+		Search:          req.Search,
+		StatusCodes:     req.StatusCodes,
+		IPAddresses:     req.IPAddresses,
+		Countries:       req.Countries,
+		Roles:           req.Roles,
+		MemberIDs:       req.MemberIDs,
+		SessionIDs:      req.SessionIDs,
+		ProjectIDs:      req.ProjectIDs,
+		ProjectFilter:   req.ProjectFilter,
+		Limit:           req.PaginationConditions.Limit,
+		Offset:          req.PaginationConditions.Offset,
+		StartDate:       req.PaginationConditions.StartDate,
+		EndDate:         req.PaginationConditions.EndDate,
+		SortBy:          req.PaginationConditions.SortBy,
+		Order:           req.PaginationConditions.Order,
+		GreaterThanID:   req.PaginationConditions.GreaterThanID,
+		LessThanID:      req.PaginationConditions.LessThanID,
+		CreatedAfter:    req.PaginationConditions.CreatedAfter,
+		CreatedBefore:   req.PaginationConditions.CreatedBefore,
+		UpdatedAfter:    req.PaginationConditions.UpdatedAfter,
+		UpdatedBefore:   req.PaginationConditions.UpdatedBefore,
 	}
 
 	limit := DefaultGetLimit
@@ -279,7 +279,7 @@ func (c *Client) Get(ctx context.Context, memberID uint, req GetRequest) (GetRes
 		}
 	}
 
-	activities, total, err := c.svc.Get(ctx, filter)
+	activities, total, err := c.svc.GetActivityLogs(ctx, filter)
 	if err != nil {
 		return GetResponse{}, err
 	}
@@ -339,7 +339,7 @@ func applyUpdateEventFallback(req *UpdateRequest, eventDeriver EventDeriver, eve
 	if req.Method != nil {
 		method = *req.Method
 	}
-	apiStatus := ""
+	apiStatus := APIStatus("")
 	if req.APIStatus != nil {
 		apiStatus = *req.APIStatus
 	}
@@ -384,35 +384,35 @@ func toActivity(model *models.ActivityLog) *Activity {
 	}
 
 	return &Activity{
-		ID:                  model.ID,
-		CreatedAt:           model.CreatedAt,
-		UpdatedAt:           model.UpdatedAt,
-		MemberID:            model.MemberID,
-		SessionID:           model.SessionID,
-		ExternalPlatformIDs: []uint(model.ExternalPlatformIDs),
-		Method:              model.Method,
-		APIPart:             model.APIPart,
-		APIStatus:           model.APIStatus,
-		StatusCode:          model.StatusCode,
-		Description:         model.Description,
-		IPAddress:           model.IPAddress,
-		UserAgent:           model.UserAgent,
-		Referer:             model.Referer,
-		APIAction:           model.APIAction,
-		APIErrorMsg:         model.APIErrorMsg,
-		RequestBody:         model.RequestBody,
-		ResponseBody:        model.ResponseBody,
-		Metadata:            model.Metadata,
-		Role:                model.Role,
-		EventCategory:       model.EventCategory,
-		EventName:           model.EventName,
-		Country:             model.Country,
-		CountryCode:         model.CountryCode,
-		Region:              model.Region,
-		City:                model.City,
-		Timezone:            model.Timezone,
-		Latitude:            model.Latitude,
-		Longitude:           model.Longitude,
+		ID:            model.ID,
+		CreatedAt:     model.CreatedAt,
+		UpdatedAt:     model.UpdatedAt,
+		MemberID:      model.MemberID,
+		SessionID:     model.SessionID,
+		ProjectIDs:    []uint(model.ProjectIDs),
+		Method:        model.Method,
+		APIPart:       model.APIPart,
+		APIStatus:     APIStatus(model.APIStatus),
+		StatusCode:    model.StatusCode,
+		Description:   model.Description,
+		IPAddress:     model.IPAddress,
+		UserAgent:     model.UserAgent,
+		Referer:       model.Referer,
+		APIAction:     model.APIAction,
+		APIErrorMsg:   model.APIErrorMsg,
+		RequestBody:   model.RequestBody,
+		ResponseBody:  model.ResponseBody,
+		Metadata:      model.Metadata,
+		Role:          model.Role,
+		EventCategory: model.EventCategory,
+		EventName:     model.EventName,
+		Country:       model.Country,
+		CountryCode:   model.CountryCode,
+		Region:        model.Region,
+		City:          model.City,
+		Timezone:      model.Timezone,
+		Latitude:      model.Latitude,
+		Longitude:     model.Longitude,
 	}
 }
 
@@ -427,8 +427,8 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 		allowedSet[id] = struct{}{}
 	}
 
-	if len(req.ExternalPlatformIDs) > 0 {
-		for _, id := range req.ExternalPlatformIDs {
+	if len(req.ProjectIDs) > 0 {
+		for _, id := range req.ProjectIDs {
 			if _, ok := allowedSet[id]; !ok {
 				return ErrUnauthorized
 			}
@@ -442,9 +442,9 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 			return ErrUnauthorized
 		case "ALL":
 			if len(allowed) == 0 {
-				req.ExternalPlatformIDs = []uint{0}
+				req.ProjectIDs = []uint{0}
 			} else {
-				req.ExternalPlatformIDs = allowed
+				req.ProjectIDs = allowed
 			}
 			req.ProjectFilter = nil
 			return nil
@@ -454,10 +454,10 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 	}
 
 	if len(allowed) == 0 {
-		req.ExternalPlatformIDs = []uint{0}
+		req.ProjectIDs = []uint{0}
 		return nil
 	}
-	req.ExternalPlatformIDs = allowed
+	req.ProjectIDs = allowed
 	return nil
 }
 
@@ -465,7 +465,7 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 	activities := make([]Activity, 0, len(modelsList))
 
 	memberIDs := internalutils.CollectMemberIDs(modelsList)
-	externalPlatformIDs := internalutils.CollectExternalPlatformIDs(modelsList)
+	projectIDs := internalutils.CollectProjectIDs(modelsList)
 
 	memberInfoMap := map[uint]MemberInfo{}
 	if c.memberResolver != nil && len(memberIDs) > 0 {
@@ -477,8 +477,8 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 	}
 
 	platformInfoMap := map[uint]ExternalPlatformInfo{}
-	if c.externalPlatformResolver != nil && len(externalPlatformIDs) > 0 {
-		info, err := c.externalPlatformResolver.GetByIDs(ctx, externalPlatformIDs)
+	if c.externalPlatformResolver != nil && len(projectIDs) > 0 {
+		info, err := c.externalPlatformResolver.GetByIDs(ctx, projectIDs)
 		if err != nil {
 			return GetResponse{}, err
 		}
@@ -498,9 +498,9 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 			}
 		}
 
-		if len(activity.ExternalPlatformIDs) > 0 {
-			platforms := make([]ExternalPlatformInfo, 0, len(activity.ExternalPlatformIDs))
-			for _, id := range activity.ExternalPlatformIDs {
+		if len(activity.ProjectIDs) > 0 {
+			platforms := make([]ExternalPlatformInfo, 0, len(activity.ProjectIDs))
+			for _, id := range activity.ProjectIDs {
 				if info, ok := platformInfoMap[id]; ok {
 					platforms = append(platforms, info)
 				}
@@ -512,4 +512,21 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 	}
 
 	return GetResponse{Activities: activities, TotalCount: total}, nil
+}
+
+func apiStatusesToStrings(statuses []APIStatus) []string {
+	if len(statuses) == 0 {
+		return nil
+	}
+	values := make([]string, 0, len(statuses))
+	for _, status := range statuses {
+		if status == "" {
+			continue
+		}
+		values = append(values, string(status))
+	}
+	if len(values) == 0 {
+		return nil
+	}
+	return values
 }

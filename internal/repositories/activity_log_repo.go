@@ -8,8 +8,8 @@ import (
 
 // ActivityLogRepository defines storage operations for activity log.
 type ActivityLogRepository interface {
-	Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error)
-	UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error)
+	CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error)
+	UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error)
 	GetActivityLogs(ctx context.Context, filter ActivityLogFilters) ([]models.ActivityLog, int64, error)
 	GetEventCategories(ctx context.Context) ([]string, error)
 }

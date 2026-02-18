@@ -22,10 +22,7 @@ func NewActivityLogRepository(db *gorm.DB, logger *zap.Logger) *ActivityLogRepos
 }
 
 // Create inserts a new activity record.
-func (r *ActivityLogRepositoryImpl) Create(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	if activity == nil {
-		return nil, fmt.Errorf("activity is nil")
-	}
+func (r *ActivityLogRepositoryImpl) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	if result := r.db.WithContext(ctx).Create(activity); result.Error != nil {
 		if r.logger != nil {
 			r.logger.Error("Failed to create activity log", zap.Error(result.Error))
@@ -35,14 +32,8 @@ func (r *ActivityLogRepositoryImpl) Create(ctx context.Context, activity *models
 	return activity, nil
 }
 
-// UpdateBySessionID updates an activity record by session ID with row locking.
-func (r *ActivityLogRepositoryImpl) UpdateBySessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	if activity == nil {
-		return nil, fmt.Errorf("activity is nil")
-	}
-	if activity.SessionID == "" {
-		return nil, fmt.Errorf("session_id is required")
-	}
+// UpdateActivityLogSessionID updates an activity record by session ID with row locking.
+func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Lock row for update
@@ -71,7 +62,7 @@ func (r *ActivityLogRepositoryImpl) UpdateBySessionID(ctx context.Context, activ
 
 	if err != nil {
 		if r.logger != nil {
-			r.logger.Error("UpdateBySessionID failed", zap.String("session_id", activity.SessionID), zap.Error(err))
+			r.logger.Error("UpdateActivityLogSessionID failed", zap.String("session_id", activity.SessionID), zap.Error(err))
 		}
 		return nil, err
 	}

@@ -37,19 +37,19 @@ func TestApplyActivityLogGetFilters_Basic(t *testing.T) {
 	session := "sess"
 	search := "term"
 	filter := ActivityLogFilters{
-		IDS:                 []uint{1, 2},
-		Methods:             []string{"GET"},
-		MemberIDs:           []uint{10},
-		APIStatuses:         []string{"SUCCESS"},
-		EventNames:          []string{"LOGIN"},
-		EventCategories:     []string{"AUTH"},
-		StatusCodes:         []int{200, 201},
-		SessionID:           &session,
-		Search:              &search,
-		IPAddresses:         []string{"1.1.1.1"},
-		Countries:           []string{"US"},
-		Roles:               []string{"admin"},
-		ExternalPlatformIDs: []uint{7},
+		IDS:             []uint{1, 2},
+		Methods:         []string{"GET"},
+		MemberIDs:       []uint{10},
+		APIStatuses:     []string{"SUCCESS"},
+		EventNames:      []string{"LOGIN"},
+		EventCategories: []string{"AUTH"},
+		StatusCodes:     []int{200, 201},
+		SessionIDs:      []string{session},
+		Search:          &search,
+		IPAddresses:     []string{"1.1.1.1"},
+		Countries:       []string{"US"},
+		Roles:           []string{"admin"},
+		ProjectIDs:      []uint{7},
 	}
 
 	query := ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
