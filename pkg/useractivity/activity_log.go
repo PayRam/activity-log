@@ -22,10 +22,10 @@ type Config struct {
 	EventDeriver     EventDeriver
 	EventInfoDeriver EventInfoDeriver
 
-	AccessResolver           AccessResolver
-	ConfigProvider           ConfigProvider
-	MemberResolver           MemberResolver
-	ExternalPlatformResolver ExternalPlatformResolver
+	AccessResolver  AccessResolver
+	ConfigProvider  ConfigProvider
+	MemberResolver  MemberResolver
+	ProjectResolver ProjectResolver
 }
 
 // Client provides Create/Update APIs for activity log records.
@@ -36,10 +36,10 @@ type Client struct {
 	eventDeriver     EventDeriver
 	eventInfoDeriver EventInfoDeriver
 
-	accessResolver           AccessResolver
-	configProvider           ConfigProvider
-	memberResolver           MemberResolver
-	externalPlatformResolver ExternalPlatformResolver
+	accessResolver  AccessResolver
+	configProvider  ConfigProvider
+	memberResolver  MemberResolver
+	projectResolver ProjectResolver
 }
 
 // New creates a new activity log client.
@@ -65,15 +65,15 @@ func New(cfg Config) (*Client, error) {
 	svc := services.NewActivityLogServiceImpl(repo, logger)
 
 	return &Client{
-		db:                       cfg.DB,
-		svc:                      svc,
-		logger:                   logger,
-		eventDeriver:             cfg.EventDeriver,
-		eventInfoDeriver:         cfg.EventInfoDeriver,
-		accessResolver:           cfg.AccessResolver,
-		configProvider:           cfg.ConfigProvider,
-		memberResolver:           cfg.MemberResolver,
-		externalPlatformResolver: cfg.ExternalPlatformResolver,
+		db:               cfg.DB,
+		svc:              svc,
+		logger:           logger,
+		eventDeriver:     cfg.EventDeriver,
+		eventInfoDeriver: cfg.EventInfoDeriver,
+		accessResolver:   cfg.AccessResolver,
+		configProvider:   cfg.ConfigProvider,
+		memberResolver:   cfg.MemberResolver,
+		projectResolver:  cfg.ProjectResolver,
 	}, nil
 }
 
@@ -476,13 +476,13 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 		memberInfoMap = info
 	}
 
-	platformInfoMap := map[uint]ExternalPlatformInfo{}
-	if c.externalPlatformResolver != nil && len(projectIDs) > 0 {
-		info, err := c.externalPlatformResolver.GetByIDs(ctx, projectIDs)
+	projectInfoMap := map[uint]ProjectInfo{}
+	if c.projectResolver != nil && len(projectIDs) > 0 {
+		info, err := c.projectResolver.GetByIDs(ctx, projectIDs)
 		if err != nil {
 			return GetResponse{}, err
 		}
-		platformInfoMap = info
+		projectInfoMap = info
 	}
 
 	for _, model := range modelsList {
@@ -499,13 +499,13 @@ func (c *Client) mapActivities(ctx context.Context, modelsList []models.Activity
 		}
 
 		if len(activity.ProjectIDs) > 0 {
-			platforms := make([]ExternalPlatformInfo, 0, len(activity.ProjectIDs))
+			projects := make([]ProjectInfo, 0, len(activity.ProjectIDs))
 			for _, id := range activity.ProjectIDs {
-				if info, ok := platformInfoMap[id]; ok {
-					platforms = append(platforms, info)
+				if info, ok := projectInfoMap[id]; ok {
+					projects = append(projects, info)
 				}
 			}
-			activity.ExternalPlatforms = platforms
+			activity.Projects = projects
 		}
 
 		activities = append(activities, *activity)

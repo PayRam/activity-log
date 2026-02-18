@@ -23,7 +23,7 @@ type MemberResolver interface {
 	GetByIDs(ctx context.Context, ids []uint) (map[uint]MemberInfo, error)
 }
 
-// ExternalPlatformResolver resolves external platform info by IDs.
-type ExternalPlatformResolver interface {
-	GetByIDs(ctx context.Context, ids []uint) (map[uint]ExternalPlatformInfo, error)
+// ProjectResolver resolves project info by IDs.
+type ProjectResolver interface {
+	GetByIDs(ctx context.Context, ids []uint) (map[uint]ProjectInfo, error)
 }

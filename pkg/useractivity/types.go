@@ -38,8 +38,8 @@ type Activity struct {
 	Latitude    *float64
 	Longitude   *float64
 
-	Member            *MemberInfo
-	ExternalPlatforms []ExternalPlatformInfo
+	Member   *MemberInfo
+	Projects []ProjectInfo
 }
 
 // CreateRequest defines the fields for creating a new activity record.
@@ -114,8 +114,8 @@ type MemberInfo struct {
 	Username *string
 }
 
-// ExternalPlatformInfo represents a lightweight external platform record for responses.
-type ExternalPlatformInfo struct {
+// ProjectInfo represents a lightweight project record for responses.
+type ProjectInfo struct {
 	ID       uint
 	Name     string
 	LogoPath string

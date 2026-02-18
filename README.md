@@ -132,7 +132,7 @@ Dependency direction:
 - `AccessResolver AccessResolver` (optional): applies `Get` access scoping
 - `ConfigProvider ConfigProvider` (optional): can override export limit (`user.activity.export.limit`)
 - `MemberResolver MemberResolver` (optional): hydrates `Activity.Member` in `Get`
-- `ExternalPlatformResolver ExternalPlatformResolver` (optional): hydrates `Activity.ExternalPlatforms` in `Get`
+- `ProjectResolver ProjectResolver` (optional): hydrates `Activity.Projects` in `Get`
 
 ## Environment Variables
 
@@ -140,16 +140,14 @@ Dependency direction:
 - `GEOLOCATION_PROVIDER_URL`: geolocation provider URL template fallback (used when `GeoLookupConfig.ProviderURLTemplate` is empty)
 - `GEOLOCATION_PROVIDER_NAME`: geolocation provider name fallback (used when `GeoLookupConfig.ProviderName` is empty)
 
-## Integrating with Different Naming
-
-This library uses `ExternalPlatform` naming in the API, but your app can map it to any domain term (for example `Project`, `Tenant`, `Workspace`).
+## Integrating with Project Naming
 
 Common mapping:
 
 | Library field | Your app (example) |
 | --- | --- |
 | `ProjectIDs` | `ProjectIDs` |
-| `ExternalPlatformResolver` | `ProjectResolver` |
+| `ProjectResolver` | `ProjectResolver` |
 | `AccessContext.AllowedProjectIDs` | IDs of projects user can access |
 | `ProjectFilter` | project-scope filter behavior |
 
@@ -159,7 +157,7 @@ Practical integration rule:
 - Keep your domain naming internally.
 - Add a thin adapter only at integration boundaries.
 
-Example adapter setup (`Project` -> `ExternalPlatform`):
+Example adapter setup:
 
 ```go
 type ProjectService interface {
@@ -177,14 +175,14 @@ type projectResolver struct {
 	projectService ProjectService
 }
 
-func (r *projectResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]useractivity.ExternalPlatformInfo, error) {
+func (r *projectResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]useractivity.ProjectInfo, error) {
 	projects, err := r.projectService.GetByIDs(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[uint]useractivity.ExternalPlatformInfo, len(projects))
+	out := make(map[uint]useractivity.ProjectInfo, len(projects))
 	for id, p := range projects {
-		out[id] = useractivity.ExternalPlatformInfo{
+		out[id] = useractivity.ProjectInfo{
 			ID:       p.ID,
 			Name:     p.Name,
 			LogoPath: p.LogoPath,
@@ -209,9 +207,9 @@ func (r *projectAccessResolver) Resolve(ctx context.Context, memberID uint) (*us
 }
 
 client, err := useractivity.New(useractivity.Config{
-	DB:                       db,
-	ExternalPlatformResolver: &projectResolver{projectService: projectService},
-	AccessResolver:           &projectAccessResolver{projectService: projectService},
+	DB:              db,
+	ProjectResolver: &projectResolver{projectService: projectService},
+	AccessResolver:  &projectAccessResolver{projectService: projectService},
 })
 ```
 

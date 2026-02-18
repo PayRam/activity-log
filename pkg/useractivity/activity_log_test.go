@@ -159,7 +159,7 @@ func (r *stubMemberResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint
 }
 
 type stubPlatformResolver struct {
-	data map[uint]ExternalPlatformInfo
+	data map[uint]ProjectInfo
 	err  error
 }
 
@@ -196,7 +196,7 @@ func newPostgresDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func (r *stubPlatformResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]ExternalPlatformInfo, error) {
+func (r *stubPlatformResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]ProjectInfo, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -240,6 +240,46 @@ func TestNewSetsCustomTableName(t *testing.T) {
 	}
 	if got := models.GetTableName(models.DefaultActivityLogTableName); got != "ua_activity_logs" {
 		t.Fatalf("expected table name ua_activity_logs, got %q", got)
+	}
+}
+
+func TestNewUsesProjectResolverFallback(t *testing.T) {
+	db := newDryRunPostgresDB(t)
+	projectResolver := &stubPlatformResolver{}
+
+	client, err := New(Config{
+		DB:              db,
+		ProjectResolver: projectResolver,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if client.projectResolver == nil {
+		t.Fatalf("expected resolver to be set from ProjectResolver")
+	}
+
+	got, ok := client.projectResolver.(*stubPlatformResolver)
+	if !ok || got != projectResolver {
+		t.Fatalf("expected resolver fallback to use provided ProjectResolver")
+	}
+}
+
+func TestNewUsesProjectResolver(t *testing.T) {
+	db := newDryRunPostgresDB(t)
+	projectResolver := &stubPlatformResolver{}
+
+	client, err := New(Config{
+		DB:              db,
+		ProjectResolver: projectResolver,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got, ok := client.projectResolver.(*stubPlatformResolver)
+	if !ok || got != projectResolver {
+		t.Fatalf("expected ProjectResolver to be used")
 	}
 }
 
@@ -546,9 +586,11 @@ func TestGetDateHandlingAndResolvers(t *testing.T) {
 	}
 
 	c := &Client{
-		svc:                      stub,
-		memberResolver:           &stubMemberResolver{data: map[uint]MemberInfo{5: {ID: 5, Name: "A"}}},
-		externalPlatformResolver: &stubPlatformResolver{data: map[uint]ExternalPlatformInfo{2: {ID: 2, Name: "P"}}},
+		svc:            stub,
+		memberResolver: &stubMemberResolver{data: map[uint]MemberInfo{5: {ID: 5, Name: "A"}}},
+		projectResolver: &stubPlatformResolver{data: map[uint]ProjectInfo{
+			2: {ID: 2, Name: "P"},
+		}},
 	}
 
 	req := GetRequest{PaginationConditions: PaginationConditions{StartDate: &start, EndDate: &future}}
@@ -562,8 +604,8 @@ func TestGetDateHandlingAndResolvers(t *testing.T) {
 	if len(resp.Activities) != 1 || resp.Activities[0].Member == nil {
 		t.Fatalf("expected member resolver to populate member info")
 	}
-	if len(resp.Activities[0].ExternalPlatforms) != 1 {
-		t.Fatalf("expected external platform resolver to populate platform info")
+	if len(resp.Activities[0].Projects) != 1 {
+		t.Fatalf("expected project resolver to populate project info")
 	}
 }
 
