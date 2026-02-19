@@ -25,7 +25,39 @@ func (s *ActivityLogServiceImpl) CreateActivityLogs(ctx context.Context, params 
 	if params.StatusCode != nil && (*params.StatusCode < 100 || *params.StatusCode > 599) {
 		return nil, fmt.Errorf("status_code must be a valid HTTP status code")
 	}
-	return s.repo.CreateActivityLogs(ctx, params)
+
+	activity := &models.ActivityLog{
+		MemberID:      params.MemberID,
+		SessionID:     params.SessionID,
+		Method:        params.Method,
+		APIPart:       params.APIPart,
+		APIStatus:     params.APIStatus,
+		StatusCode:    params.StatusCode,
+		Description:   params.Description,
+		IPAddress:     params.IPAddress,
+		UserAgent:     params.UserAgent,
+		Referer:       params.Referer,
+		APIAction:     params.APIAction,
+		APIErrorMsg:   params.APIErrorMsg,
+		RequestBody:   params.RequestBody,
+		ResponseBody:  params.ResponseBody,
+		Metadata:      params.Metadata,
+		Role:          params.Role,
+		EventCategory: params.EventCategory,
+		EventName:     params.EventName,
+		Country:       params.Country,
+		CountryCode:   params.CountryCode,
+		Region:        params.Region,
+		City:          params.City,
+		Timezone:      params.Timezone,
+		Latitude:      params.Latitude,
+		Longitude:     params.Longitude,
+	}
+	if params.ProjectIDs != nil {
+		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+	}
+
+	return s.repo.CreateActivityLogs(ctx, activity)
 }
 
 // UpdateActivityLogSessionID updates an activity record by session ID.
@@ -36,7 +68,53 @@ func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context,
 	if params.StatusCode != nil && (*params.StatusCode < 100 || *params.StatusCode > 599) {
 		return nil, fmt.Errorf("status_code must be a valid HTTP status code")
 	}
-	return s.repo.UpdateActivityLogSessionID(ctx, params)
+
+	activity := &models.ActivityLog{
+		SessionID:     params.SessionID,
+		MemberID:      params.MemberID,
+		StatusCode:    params.StatusCode,
+		Description:   params.Description,
+		APIErrorMsg:   params.APIErrorMsg,
+		IPAddress:     params.IPAddress,
+		UserAgent:     params.UserAgent,
+		Referer:       params.Referer,
+		ResponseBody:  params.ResponseBody,
+		Metadata:      params.Metadata,
+		RequestBody:   params.RequestBody,
+		Role:          params.Role,
+		EventCategory: params.EventCategory,
+		EventName:     params.EventName,
+		Country:       params.Country,
+		CountryCode:   params.CountryCode,
+		Region:        params.Region,
+		City:          params.City,
+		Timezone:      params.Timezone,
+		Latitude:      params.Latitude,
+		Longitude:     params.Longitude,
+	}
+
+	if params.ProjectIDs != nil {
+		activity.ProjectIDsSet = true
+		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+	}
+	if params.Method != nil {
+		activity.MethodSet = true
+		activity.Method = *params.Method
+	}
+	if params.APIPart != nil {
+		activity.APIPartSet = true
+		activity.APIPart = *params.APIPart
+	}
+	if params.APIAction != nil {
+		activity.APIActionSet = true
+		activity.APIAction = *params.APIAction
+	}
+	if params.APIStatus != nil {
+		activity.APIStatusSet = true
+		activity.APIStatus = *params.APIStatus
+	}
+
+	return s.repo.UpdateActivityLogSessionID(ctx, activity)
 }
 
 // Get retrieves activities with filtering.

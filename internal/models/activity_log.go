@@ -46,6 +46,13 @@ type ActivityLog struct {
 	Timezone    *string  `gorm:"size:100"`
 	Latitude    *float64 `gorm:"type:decimal(10,7)"`
 	Longitude   *float64 `gorm:"type:decimal(10,7)"`
+
+	// Update masks used by repository update paths; not persisted.
+	ProjectIDsSet bool `gorm:"-" json:"-"`
+	MethodSet     bool `gorm:"-" json:"-"`
+	APIPartSet    bool `gorm:"-" json:"-"`
+	APIActionSet  bool `gorm:"-" json:"-"`
+	APIStatusSet  bool `gorm:"-" json:"-"`
 }
 
 // TableName applies the configured table prefix.

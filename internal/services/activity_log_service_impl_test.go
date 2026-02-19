@@ -16,6 +16,9 @@ type fakeRepo struct {
 	listCalled   bool
 	catCalled    bool
 
+	lastCreate *models.ActivityLog
+	lastUpdate *models.ActivityLog
+
 	createErr error
 	updateErr error
 	listErr   error
@@ -26,20 +29,22 @@ type fakeRepo struct {
 	cats      []string
 }
 
-func (f *fakeRepo) CreateActivityLogs(ctx context.Context, params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
+func (f *fakeRepo) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	f.createCalled = true
+	f.lastCreate = activity
 	if f.createErr != nil {
 		return nil, f.createErr
 	}
-	return &models.ActivityLog{SessionID: params.SessionID}, nil
+	return &models.ActivityLog{SessionID: activity.SessionID}, nil
 }
 
-func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, params repositories.UpdateActivityLogSessionParams) (*models.ActivityLog, error) {
+func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
 	f.updateCalled = true
+	f.lastUpdate = activity
 	if f.updateErr != nil {
 		return nil, f.updateErr
 	}
-	return &models.ActivityLog{SessionID: params.SessionID}, nil
+	return &models.ActivityLog{SessionID: activity.SessionID}, nil
 }
 
 func (f *fakeRepo) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
@@ -81,12 +86,19 @@ func TestActivityLogServicePassThrough(t *testing.T) {
 	if !repo.createCalled {
 		t.Fatalf("expected create to be called")
 	}
+	if repo.lastCreate == nil || repo.lastCreate.SessionID != "s1" {
+		t.Fatalf("expected service to map create params into model")
+	}
 
-	if _, err := svc.UpdateActivityLogSessionID(context.Background(), repositories.UpdateActivityLogSessionParams{SessionID: "s1"}); err != nil {
+	method := "PATCH"
+	if _, err := svc.UpdateActivityLogSessionID(context.Background(), repositories.UpdateActivityLogSessionParams{SessionID: "s1", Method: &method}); err != nil {
 		t.Fatalf("unexpected update error: %v", err)
 	}
 	if !repo.updateCalled {
 		t.Fatalf("expected update to be called")
+	}
+	if repo.lastUpdate == nil || repo.lastUpdate.SessionID != "s1" || !repo.lastUpdate.MethodSet || repo.lastUpdate.Method != "PATCH" {
+		t.Fatalf("expected service to map update params into model with update masks")
 	}
 
 	activities, total, err := svc.GetActivityLogs(context.Background(), repositories.ActivityLogFilters{})
