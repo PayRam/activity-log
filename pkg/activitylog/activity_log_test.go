@@ -602,7 +602,7 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 		t.Fatalf("expected limit capped to export limit")
 	}
 	if len(stub.lastFilter.ProjectIDs) != 2 {
-		t.Fatalf("expected access scope to set external platform IDs")
+		t.Fatalf("expected access scope to set project IDs")
 	}
 
 	req = GetRequest{ProjectIDs: []uint{3}}

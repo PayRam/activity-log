@@ -37,14 +37,14 @@ func TestNewCoreLikeEventDeriver_Fallback(t *testing.T) {
 	deriver := NewCoreLikeEventDeriver(CoreLikeEventDeriverConfig{})
 
 	category, name := deriver(EventDeriverInput{
-		Endpoint: "/api/v1/external-platform",
+		Endpoint: "/api/v1/project",
 		Method:   "POST",
 	})
-	if category != "EXTERNAL_PLATFORM" {
-		t.Fatalf("expected fallback category EXTERNAL_PLATFORM, got %q", category)
+	if category != "PROJECT" {
+		t.Fatalf("expected fallback category PROJECT, got %q", category)
 	}
-	if name != "EXTERNAL_PLATFORM_CREATE" {
-		t.Fatalf("expected fallback name EXTERNAL_PLATFORM_CREATE, got %q", name)
+	if name != "PROJECT_CREATE" {
+		t.Fatalf("expected fallback name PROJECT_CREATE, got %q", name)
 	}
 }
 
