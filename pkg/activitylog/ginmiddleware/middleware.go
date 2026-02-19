@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/PayRam/activity-log/internal/middleware"
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	activitylog "github.com/PayRam/activity-log/pkg/activitylog"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -14,9 +14,9 @@ import (
 
 // Context keys stored on gin.Context.
 const (
-	ContextKeySessionID      = "useractivity_session_id"
-	ContextKeyRequestBody    = "useractivity_request_body"
-	ContextKeyLibraryEnabled = "useractivity_library_enabled"
+	ContextKeySessionID      = "activitylog_session_id"
+	ContextKeyRequestBody    = "activitylog_request_body"
+	ContextKeyLibraryEnabled = "activitylog_library_enabled"
 )
 
 // CapturedResponse contains response details captured by middleware.
@@ -27,7 +27,7 @@ type CapturedResponse struct {
 
 // Config configures the Gin middleware.
 type Config struct {
-	Client *useractivity.Client
+	Client *activitylog.Client
 	Logger *zap.Logger
 
 	CaptureRequestBody  bool
@@ -43,16 +43,18 @@ type Config struct {
 	SessionIDFunc   func(*gin.Context) string
 	IPExtractor     func(*gin.Context) string
 
-	CreateEnricher func(*gin.Context, *useractivity.CreateRequest)
-	UpdateEnricher func(*gin.Context, *useractivity.UpdateRequest, *CapturedResponse)
-	GeoLookup      *useractivity.GeoLookup
+	CreateEnricher func(*gin.Context, *activitylog.CreateRequest)
+	UpdateEnricher func(*gin.Context, *activitylog.UpdateRequest, *CapturedResponse)
+	GeoLookup      *activitylog.GeoLookup
 
 	Async   bool
 	OnError func(error)
 }
 
 // Middleware returns a Gin middleware that logs activity log.
-func Middleware(cfg Config) gin.HandlerFunc {
+// When called without args, it uses the package default config set by SetDefaultConfig.
+func Middleware(configs ...Config) gin.HandlerFunc {
+	cfg := resolveConfig(configs)
 	if cfg.Client == nil {
 		return func(c *gin.Context) { c.Next() }
 	}
@@ -82,7 +84,7 @@ func Middleware(cfg Config) gin.HandlerFunc {
 		c.Set(ContextKeySessionID, sessionID)
 		c.Set(ContextKeyLibraryEnabled, true)
 		ctx := context.WithValue(c.Request.Context(), middlewareContextKeySessionID, sessionID)
-		ctx = useractivity.WithSessionID(ctx, sessionID)
+		ctx = activitylog.WithSessionID(ctx, sessionID)
 		c.Request = c.Request.WithContext(ctx)
 
 		requestBody, err := readRequestBody(cfg, c, maxBytes)
@@ -97,19 +99,19 @@ func Middleware(cfg Config) gin.HandlerFunc {
 		userAgent := c.Request.UserAgent()
 		referer := c.Request.Referer()
 
-		createReq := useractivity.CreateRequest{
+		createReq := activitylog.CreateRequest{
 			SessionID:   sessionID,
 			Method:      c.Request.Method,
 			Endpoint:    c.Request.URL.Path,
 			APIAction:   middleware.MethodToAction(c.Request.Method),
-			APIStatus:   useractivity.APIStatusSuccess,
+			APIStatus:   activitylog.APIStatusSuccess,
 			RequestBody: requestBody,
 		}
 
 		if ip != "" {
 			createReq.IPAddress = &ip
 			if cfg.GeoLookup != nil {
-				useractivity.EnrichCreateRequestWithLocation(&createReq, cfg.GeoLookup.Lookup(ip))
+				activitylog.EnrichCreateRequestWithLocation(&createReq, cfg.GeoLookup.Lookup(ip))
 			}
 		}
 		if userAgent != "" {
@@ -149,11 +151,11 @@ func Middleware(cfg Config) gin.HandlerFunc {
 
 		status := recorder.Status()
 		body := recorder.Body()
-		apiStatus := useractivity.APIStatus(middleware.StatusToAPIStatus(status))
+		apiStatus := activitylog.APIStatus(middleware.StatusToAPIStatus(status))
 		method := c.Request.Method
 		endpoint := c.Request.URL.Path
-		statusCode := useractivity.HTTPStatusCode(status)
-		updateReq := useractivity.UpdateRequest{
+		statusCode := activitylog.HTTPStatusCode(status)
+		updateReq := activitylog.UpdateRequest{
 			SessionID:   sessionID,
 			Method:      &method,
 			Endpoint:    &endpoint,
@@ -189,7 +191,7 @@ func Middleware(cfg Config) gin.HandlerFunc {
 
 type contextKey string
 
-const middlewareContextKeySessionID contextKey = "useractivity_session_id"
+const middlewareContextKeySessionID contextKey = "activitylog_session_id"
 
 func resolveSessionID(cfg Config, c *gin.Context) string {
 	if cfg.SessionIDFunc != nil {
@@ -210,6 +212,16 @@ func resolveIP(cfg Config, c *gin.Context) string {
 		return cfg.IPExtractor(c)
 	}
 	return c.ClientIP()
+}
+
+func resolveConfig(configs []Config) Config {
+	if len(configs) > 0 {
+		return configs[0]
+	}
+	if cfg, ok := loadDefaultConfig(); ok {
+		return cfg
+	}
+	return Config{}
 }
 
 func readRequestBody(cfg Config, c *gin.Context, maxBytes int64) (*string, error) {
@@ -242,7 +254,7 @@ func handleError(cfg Config, logger *zap.Logger, err error) {
 		return
 	}
 	if logger != nil {
-		logger.Error("useractivity middleware error", zap.Error(err))
+		logger.Error("activitylog middleware error", zap.Error(err))
 	}
 }
 

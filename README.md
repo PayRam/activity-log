@@ -26,7 +26,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/activitylog"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -40,7 +40,7 @@ func run() error {
 
 	logger, _ := zap.NewProduction()
 
-	client, err := useractivity.New(useractivity.Config{
+	client, err := activitylog.New(activitylog.Config{
 		DB:          db,
 		Logger:      logger,
 		TablePrefix: "",
@@ -53,21 +53,21 @@ func run() error {
 		return err
 	}
 
-	_, err = client.CreateActivityLogs(context.Background(), useractivity.CreateRequest{
+	_, err = client.CreateActivityLogs(context.Background(), activitylog.CreateRequest{
 		SessionID: "session-123",
 		Method:    "POST",
 		Endpoint:  "/api/v1/payment-request",
-		APIAction: useractivity.APIActionWrite,
-		APIStatus: useractivity.APIStatusSuccess,
+		APIAction: activitylog.APIActionWrite,
+		APIStatus: activitylog.APIStatusSuccess,
 	})
 	if err != nil {
 		return err
 	}
 
-	status := useractivity.APIStatusError
-	code := useractivity.HTTPStatusCode(http.StatusInternalServerError)
+	status := activitylog.APIStatusError
+	code := activitylog.HTTPStatusCode(http.StatusInternalServerError)
 	msg := "downstream failed"
-	_, err = client.UpdateActivityLogSessionID(context.Background(), useractivity.UpdateRequest{
+	_, err = client.UpdateActivityLogSessionID(context.Background(), activitylog.UpdateRequest{
 		SessionID:   "session-123",
 		APIStatus:   &status,
 		StatusCode:  &code,
@@ -92,7 +92,7 @@ This is useful when one API call triggers multiple service operations.
 ```text
 activity-log/
 ├── pkg/
-│   └── useractivity/                # public API surface
+│   └── activitylog/                # public API surface
 │       ├── activity_log.go         # Client + Create/Update/Get APIs
 │       ├── types.go                 # request/response contracts
 │       ├── service_tracker.go       # service/repository operation tracker
@@ -113,15 +113,15 @@ activity-log/
 
 Dependency direction:
 
-- app imports `pkg/useractivity` (and optional `pkg/useractivity/ginmiddleware`, `pkg/useractivity/httpmiddleware`)
-- `pkg/useractivity` uses `internal/services`
+- app imports `pkg/activitylog` (and optional `pkg/activitylog/ginmiddleware`, `pkg/activitylog/httpmiddleware`)
+- `pkg/activitylog` uses `internal/services`
 - `internal/services` uses `internal/repositories`
 - `internal/repositories` uses `internal/models` + `gorm`
 - `internal/*` packages are implementation details and not for external imports
 
 ## Client Config
 
-`useractivity.Config`:
+`activitylog.Config`:
 
 - `DB *gorm.DB` (required): gorm database handle
 - `Logger *zap.Logger` (optional): defaults to production zap logger
@@ -175,14 +175,14 @@ type projectResolver struct {
 	projectService ProjectService
 }
 
-func (r *projectResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]useractivity.ProjectInfo, error) {
+func (r *projectResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]activitylog.ProjectInfo, error) {
 	projects, err := r.projectService.GetByIDs(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[uint]useractivity.ProjectInfo, len(projects))
+	out := make(map[uint]activitylog.ProjectInfo, len(projects))
 	for id, p := range projects {
-		out[id] = useractivity.ProjectInfo{
+		out[id] = activitylog.ProjectInfo{
 			ID:       p.ID,
 			Name:     p.Name,
 			LogoPath: p.LogoPath,
@@ -195,18 +195,18 @@ type projectAccessResolver struct {
 	projectService ProjectService
 }
 
-func (r *projectAccessResolver) Resolve(ctx context.Context, memberID uint) (*useractivity.AccessContext, error) {
+func (r *projectAccessResolver) Resolve(ctx context.Context, memberID uint) (*activitylog.AccessContext, error) {
 	allowed, err := r.projectService.GetAllowedProjectIDs(ctx, memberID)
 	if err != nil {
 		return nil, err
 	}
-	return &useractivity.AccessContext{
+	return &activitylog.AccessContext{
 		IsAdmin:           false,
 		AllowedProjectIDs: allowed,
 	}, nil
 }
 
-client, err := useractivity.New(useractivity.Config{
+client, err := activitylog.New(activitylog.Config{
 	DB:              db,
 	ProjectResolver: &projectResolver{projectService: projectService},
 	AccessResolver:  &projectAccessResolver{projectService: projectService},
@@ -217,12 +217,12 @@ Request mapping example:
 
 ```go
 projectID := uint(101)
-_, err := client.CreateActivityLogs(ctx, useractivity.CreateRequest{
+_, err := client.CreateActivityLogs(ctx, activitylog.CreateRequest{
 	SessionID:           "s-1",
 	Method:              "POST",
 	Endpoint:            "/payments",
-	APIAction:           useractivity.APIActionWrite,
-	APIStatus:           useractivity.APIStatusSuccess,
+	APIAction:           activitylog.APIActionWrite,
+	APIStatus:           activitylog.APIStatusSuccess,
 	ProjectIDs: []uint{projectID}, // project scope in your app
 })
 ```
@@ -266,9 +266,9 @@ Event deriver options:
 Example:
 
 ```go
-client, err := useractivity.New(useractivity.Config{
+client, err := activitylog.New(activitylog.Config{
 	DB: db,
-	EventInfoDeriver: useractivity.NewCoreLikeEventInfoDeriver(useractivity.CoreLikeEventDeriverConfig{
+	EventInfoDeriver: activitylog.NewCoreLikeEventInfoDeriver(activitylog.CoreLikeEventDeriverConfig{
 		BasePath:   "/api/v1",
 		TableNames: []string{"members", "payment_requests", "withdrawals"},
 	}),
@@ -406,12 +406,12 @@ Both middleware packages follow the same model:
 
 Packages:
 
-- Gin: `github.com/PayRam/activity-log/pkg/useractivity/ginmiddleware`
-- net/http: `github.com/PayRam/activity-log/pkg/useractivity/httpmiddleware`
+- Gin: `github.com/PayRam/activity-log/pkg/activitylog/ginmiddleware`
+- net/http: `github.com/PayRam/activity-log/pkg/activitylog/httpmiddleware`
 
 Shared config fields:
 
-- `Client *useractivity.Client` (required)
+- `Client *activitylog.Client` (required)
 - `Logger *zap.Logger`
 - `CaptureRequestBody bool`
 - `CaptureResponseBody bool`
@@ -426,13 +426,21 @@ Shared config fields:
 - `SessionIDFunc func(*http.Request) string` (net/http)
 - `IPExtractor func(*gin.Context) string` (Gin)
 - `IPExtractor func(*http.Request) string` (net/http)
-- `GeoLookup *useractivity.GeoLookup` (optional): enriches request with `Country/City/...` from IP
-- `CreateEnricher func(*gin.Context, *useractivity.CreateRequest)` (Gin)
-- `CreateEnricher func(*http.Request, *useractivity.CreateRequest)` (net/http)
-- `UpdateEnricher func(*gin.Context, *useractivity.UpdateRequest, *ginmiddleware.CapturedResponse)` (Gin)
-- `UpdateEnricher func(*http.Request, *useractivity.UpdateRequest, *httpmiddleware.CapturedResponse)` (net/http)
+- `GeoLookup *activitylog.GeoLookup` (optional): enriches request with `Country/City/...` from IP
+- `CreateEnricher func(*gin.Context, *activitylog.CreateRequest)` (Gin)
+- `CreateEnricher func(*http.Request, *activitylog.CreateRequest)` (net/http)
+- `UpdateEnricher func(*gin.Context, *activitylog.UpdateRequest, *ginmiddleware.CapturedResponse)` (Gin)
+- `UpdateEnricher func(*http.Request, *activitylog.UpdateRequest, *httpmiddleware.CapturedResponse)` (net/http)
 - `Async bool`
 - `OnError func(error)`
+
+Optional global wrapper (same shape as `Middleware()` with no args):
+
+- Gin: call `ginmiddleware.SetDefaultConfig(cfg)` once, then use `ginmiddleware.Middleware()`
+- net/http: call `httpmiddleware.SetDefaultConfig(cfg)` once, then use `httpmiddleware.Middleware()`
+- call `ResetDefaultConfig()` in tests to avoid cross-test leakage
+
+Important: this global wrapper trades convenience for weaker test isolation. Prefer explicit DI (`Middleware(Config{...})`) for production wiring.
 
 Use `SkipPaths` or `Skip` for sensitive routes:
 
@@ -449,14 +457,14 @@ router.Use(ginmiddleware.Middleware(ginmiddleware.Config{
 	CaptureRequestBody:  true,
 	CaptureResponseBody: true,
 	MaxBodyBytes:        1 * 1024 * 1024,
-	GeoLookup:           useractivity.NewGeoLookup(useractivity.GeoLookupConfig{}),
+	GeoLookup:           activitylog.NewGeoLookup(activitylog.GeoLookupConfig{}),
 	SkipPaths:           []string{"/signin", "/signup"},
-	Redact:              useractivity.RedactDefaultJSONKeys,
-	ResponseRedact:      useractivity.RedactDefaultJSONKeys,
-	CreateEnricher: func(c *gin.Context, req *useractivity.CreateRequest) {
+	Redact:              activitylog.RedactDefaultJSONKeys,
+	ResponseRedact:      activitylog.RedactDefaultJSONKeys,
+	CreateEnricher: func(c *gin.Context, req *activitylog.CreateRequest) {
 		// set MemberID / Role / EventName, etc.
 	},
-	UpdateEnricher: func(c *gin.Context, req *useractivity.UpdateRequest, resp *ginmiddleware.CapturedResponse) {
+	UpdateEnricher: func(c *gin.Context, req *activitylog.UpdateRequest, resp *ginmiddleware.CapturedResponse) {
 		// add description / metadata, etc.
 	},
 }))
@@ -470,14 +478,14 @@ mw := httpmiddleware.Middleware(httpmiddleware.Config{
 	CaptureRequestBody:  true,
 	CaptureResponseBody: true,
 	MaxBodyBytes:        1 * 1024 * 1024,
-	GeoLookup:           useractivity.NewGeoLookup(useractivity.GeoLookupConfig{}),
+	GeoLookup:           activitylog.NewGeoLookup(activitylog.GeoLookupConfig{}),
 	SkipPaths:           []string{"/signin", "/signup"},
-	Redact:              useractivity.RedactDefaultJSONKeys,
-	ResponseRedact:      useractivity.RedactDefaultJSONKeys,
-	CreateEnricher: func(r *http.Request, req *useractivity.CreateRequest) {
+	Redact:              activitylog.RedactDefaultJSONKeys,
+	ResponseRedact:      activitylog.RedactDefaultJSONKeys,
+	CreateEnricher: func(r *http.Request, req *activitylog.CreateRequest) {
 		// set MemberID / Role / EventName, etc.
 	},
-	UpdateEnricher: func(r *http.Request, req *useractivity.UpdateRequest, resp *httpmiddleware.CapturedResponse) {
+	UpdateEnricher: func(r *http.Request, req *activitylog.UpdateRequest, resp *httpmiddleware.CapturedResponse) {
 		// add description / metadata, etc.
 	},
 })
@@ -497,7 +505,7 @@ Use built-in helpers when you want geolocation outside middleware hooks.
 - `HTTPClient *http.Client`
 
 ```go
-lookup := useractivity.NewGeoLookup(useractivity.GeoLookupConfig{
+lookup := activitylog.NewGeoLookup(activitylog.GeoLookupConfig{
 	ProviderURLTemplate: "https://ipwhois.app/json/%s", // optional
 	ProviderName:        "ipwhois.io",                  // optional
 	Timeout:             5 * time.Second,               // optional
@@ -506,7 +514,7 @@ lookup := useractivity.NewGeoLookup(useractivity.GeoLookupConfig{
 
 location := lookup.Lookup("8.8.8.8")
 if location != nil {
-	useractivity.EnrichCreateRequestWithLocation(&createReq, location)
+	activitylog.EnrichCreateRequestWithLocation(&createReq, location)
 }
 ```
 
@@ -520,15 +528,15 @@ Environment variables (used if config values are empty):
 Use service tracker to log business/service/repository operations:
 
 ```go
-tracker := useractivity.NewServiceTracker(useractivity.ServiceTrackerConfig{
+tracker := activitylog.NewServiceTracker(activitylog.ServiceTrackerConfig{
 	Client: client,
 })
 
 memberID := uint(42)
-err := tracker.Track(ctx, useractivity.ServiceOperation{
+err := tracker.Track(ctx, activitylog.ServiceOperation{
 	Name:      "PaymentService.CreateNewPaymentRequest",
 	MemberID:  &memberID,
-	APIAction: useractivity.APIActionWrite,
+	APIAction: activitylog.APIActionWrite,
 }, func(ctx context.Context) error {
 	return repo.CreateActivityLogs(ctx, memberID)
 })
@@ -536,12 +544,12 @@ err := tracker.Track(ctx, useractivity.ServiceOperation{
 
 `ServiceTrackerConfig` fields:
 
-- `Client *useractivity.Client` (required)
+- `Client *activitylog.Client` (required)
 - `Logger *zap.Logger`
 - `Async bool`
 - `OnError func(error)`
-- `CreateEnricher func(context.Context, *useractivity.CreateRequest)`
-- `UpdateEnricher func(context.Context, *useractivity.UpdateRequest, *useractivity.ServiceResult)`
+- `CreateEnricher func(context.Context, *activitylog.CreateRequest)`
+- `UpdateEnricher func(context.Context, *activitylog.UpdateRequest, *activitylog.ServiceResult)`
 
 `ServiceOperation` supported fields:
 
@@ -578,7 +586,7 @@ type apiMeta struct {
 	ServiceStatus *string `json:"serviceStatus,omitempty"`
 }
 
-req.Metadata = useractivity.MergeMetadata(req.Metadata, apiMeta{
+req.Metadata = activitylog.MergeMetadata(req.Metadata, apiMeta{
 	ServiceName:   req.EventName,
 	ServiceStatus: req.APIStatus,
 })

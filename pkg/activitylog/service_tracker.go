@@ -1,4 +1,4 @@
-package useractivity
+package activitylog
 
 import (
 	"context"
@@ -213,6 +213,6 @@ func (t *ServiceTracker) handleError(err error) {
 		return
 	}
 	if t.logger != nil {
-		t.logger.Error("useractivity service tracker error", zap.Error(err))
+		t.logger.Error("activitylog service tracker error", zap.Error(err))
 	}
 }

@@ -1,4 +1,4 @@
-package useractivity
+package activitylog
 
 import "context"
 

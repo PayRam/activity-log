@@ -14,9 +14,9 @@ It captures:
 
 Public layer:
 
-- `pkg/useractivity`
-- `pkg/useractivity/ginmiddleware`
-- `pkg/useractivity/httpmiddleware`
+- `pkg/activitylog`
+- `pkg/activitylog/ginmiddleware`
+- `pkg/activitylog/httpmiddleware`
 
 Internal layer:
 
@@ -28,8 +28,8 @@ Internal layer:
 
 Dependency direction:
 
-- App -> `pkg/useractivity`
-- `pkg/useractivity` -> `internal/services`
+- App -> `pkg/activitylog`
+- `pkg/activitylog` -> `internal/services`
 - `internal/services` -> `internal/repositories`
 - `internal/repositories` -> `internal/models`
 

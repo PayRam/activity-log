@@ -1,12 +1,12 @@
-package useractivity
+package activitylog
 
 import "context"
 
 type contextKey string
 
 const (
-	contextKeySessionID      contextKey = "useractivity_session_id"
-	contextKeyOperationTrail contextKey = "useractivity_operation_trail"
+	contextKeySessionID      contextKey = "activitylog_session_id"
+	contextKeyOperationTrail contextKey = "activitylog_operation_trail"
 )
 
 // WithSessionID stores the activity session ID on the context.

@@ -1,4 +1,4 @@
-package useractivity
+package activitylog
 
 // ServiceMetadata is a structured metadata payload for service-level tracking.
 type ServiceMetadata struct {

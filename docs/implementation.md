@@ -4,7 +4,7 @@ This document explains how the library works internally and gives concrete integ
 
 ## 1) Bootstrapping the Client
 
-Main entrypoint: `pkg/useractivity/activity_log.go`.
+Main entrypoint: `pkg/activitylog/activity_log.go`.
 
 Key behaviors:
 
@@ -21,7 +21,7 @@ package main
 import (
 	"context"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/activitylog"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -35,34 +35,34 @@ type memberResolver struct{}
 
 type projectResolver struct{}
 
-func (r *accessResolver) Resolve(ctx context.Context, memberID uint) (*useractivity.AccessContext, error) {
-	return &useractivity.AccessContext{IsAdmin: false, AllowedProjectIDs: []uint{101, 102}}, nil
+func (r *accessResolver) Resolve(ctx context.Context, memberID uint) (*activitylog.AccessContext, error) {
+	return &activitylog.AccessContext{IsAdmin: false, AllowedProjectIDs: []uint{101, 102}}, nil
 }
 
 func (p *configProvider) GetInt(ctx context.Context, key string) (int, bool, error) {
-	if key == useractivity.ConfigKeyActivityLogExportLimit {
+	if key == activitylog.ConfigKeyActivityLogExportLimit {
 		return 2000, true, nil
 	}
 	return 0, false, nil
 }
 
-func (r *memberResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]useractivity.MemberInfo, error) {
-	out := map[uint]useractivity.MemberInfo{}
+func (r *memberResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]activitylog.MemberInfo, error) {
+	out := map[uint]activitylog.MemberInfo{}
 	for _, id := range ids {
-		out[id] = useractivity.MemberInfo{ID: id, Name: "member"}
+		out[id] = activitylog.MemberInfo{ID: id, Name: "member"}
 	}
 	return out, nil
 }
 
-func (r *projectResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]useractivity.ProjectInfo, error) {
-	out := map[uint]useractivity.ProjectInfo{}
+func (r *projectResolver) GetByIDs(ctx context.Context, ids []uint) (map[uint]activitylog.ProjectInfo, error) {
+	out := map[uint]activitylog.ProjectInfo{}
 	for _, id := range ids {
-		out[id] = useractivity.ProjectInfo{ID: id, Name: "project"}
+		out[id] = activitylog.ProjectInfo{ID: id, Name: "project"}
 	}
 	return out, nil
 }
 
-func newClient() (*useractivity.Client, error) {
+func newClient() (*activitylog.Client, error) {
 	db, err := gorm.Open(postgres.Open("your-dsn"), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -70,12 +70,12 @@ func newClient() (*useractivity.Client, error) {
 
 	logger, _ := zap.NewProduction()
 
-	client, err := useractivity.New(useractivity.Config{
+	client, err := activitylog.New(activitylog.Config{
 		DB:          db,
 		Logger:      logger,
 		TablePrefix: "core_",
 		TableName:   "activity_logs",
-		EventInfoDeriver: useractivity.NewCoreLikeEventInfoDeriver(useractivity.CoreLikeEventDeriverConfig{
+		EventInfoDeriver: activitylog.NewCoreLikeEventInfoDeriver(activitylog.CoreLikeEventDeriverConfig{
 			BasePath: "/api/v1",
 		}),
 		AccessResolver:  &accessResolver{},
@@ -112,21 +112,21 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/activitylog"
 )
 
-func createExample(client *useractivity.Client) error {
-	status := useractivity.HTTPStatusCode(http.StatusCreated)
+func createExample(client *activitylog.Client) error {
+	status := activitylog.HTTPStatusCode(http.StatusCreated)
 	desc := "payment request created"
 
-	_, err := client.CreateActivityLogs(context.Background(), useractivity.CreateRequest{
+	_, err := client.CreateActivityLogs(context.Background(), activitylog.CreateRequest{
 		SessionID:  "sess-123",
 		MemberID:   uintPtr(77),
 		ProjectIDs: []uint{101},
 		Method:     http.MethodPost,
 		Endpoint:   "/api/v1/payment-request",
-		APIAction:  useractivity.APIActionWrite,
-		APIStatus:  useractivity.APIStatusSuccess,
+		APIAction:  activitylog.APIActionWrite,
+		APIStatus:  activitylog.APIStatusSuccess,
 		StatusCode: &status,
 		Description: &desc,
 	})
@@ -161,18 +161,18 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/activitylog"
 )
 
-func updateExample(client *useractivity.Client) error {
-	status := useractivity.APIStatusDenied
-	code := useractivity.HTTPStatusCode(http.StatusForbidden)
+func updateExample(client *activitylog.Client) error {
+	status := activitylog.APIStatusDenied
+	code := activitylog.HTTPStatusCode(http.StatusForbidden)
 	msg := "permission denied"
 
 	// set project IDs to NULL in DB
 	var nilProjects []uint
 
-	_, err := client.UpdateActivityLogSessionID(context.Background(), useractivity.UpdateRequest{
+	_, err := client.UpdateActivityLogSessionID(context.Background(), activitylog.UpdateRequest{
 		SessionID:   "sess-123",
 		APIStatus:   &status,
 		StatusCode:  &code,
@@ -203,10 +203,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/activitylog"
 )
 
-func listExample(client *useractivity.Client) (useractivity.GetResponse, error) {
+func listExample(client *activitylog.Client) (activitylog.GetResponse, error) {
 	from := time.Now().Add(-24 * time.Hour)
 	to := time.Now()
 	limit := 50
@@ -214,17 +214,17 @@ func listExample(client *useractivity.Client) (useractivity.GetResponse, error) 
 	sortBy := "created_at"
 	order := "DESC"
 
-	pf := useractivity.ProjectFilterAll
+	pf := activitylog.ProjectFilterAll
 
-	return client.GetActivityLogs(context.Background(), 77, useractivity.GetRequest{
-		StatusCodes: []useractivity.HTTPStatusCode{
-			useractivity.HTTPStatusCode(http.StatusOK),
-			useractivity.HTTPStatusCode(http.StatusBadRequest),
+	return client.GetActivityLogs(context.Background(), 77, activitylog.GetRequest{
+		StatusCodes: []activitylog.HTTPStatusCode{
+			activitylog.HTTPStatusCode(http.StatusOK),
+			activitylog.HTTPStatusCode(http.StatusBadRequest),
 		},
 		Methods:       []string{http.MethodGet, http.MethodPost},
 		EventNames:    []string{"PAYMENT_CREATE", "WITHDRAWAL_APPROVE"},
 		ProjectFilter: &pf,
-		PaginationConditions: useractivity.PaginationConditions{
+		PaginationConditions: activitylog.PaginationConditions{
 			Limit:     &limit,
 			Offset:    &offset,
 			SortBy:    &sortBy,
@@ -240,8 +240,8 @@ func listExample(client *useractivity.Client) (useractivity.GetResponse, error) 
 
 Files:
 
-- Gin: `pkg/useractivity/ginmiddleware/middleware.go`
-- net/http: `pkg/useractivity/httpmiddleware/middleware.go`
+- Gin: `pkg/activitylog/ginmiddleware/middleware.go`
+- net/http: `pkg/activitylog/httpmiddleware/middleware.go`
 
 Lifecycle:
 
@@ -251,6 +251,14 @@ Lifecycle:
 4. capture response status/body.
 5. call `UpdateActivityLogSessionID` at response end.
 
+Optional global wrapper:
+
+- Gin: set `ginmiddleware.SetDefaultConfig(cfg)` once, then call `ginmiddleware.Middleware()` with no args.
+- net/http: set `httpmiddleware.SetDefaultConfig(cfg)` once, then call `httpmiddleware.Middleware()` with no args.
+- for tests, call `ResetDefaultConfig()` to avoid global-state leakage.
+
+Prefer `Middleware(Config{...})` in production because explicit DI is easier to reason about and test.
+
 ### Sample: Gin middleware
 
 ```go
@@ -259,26 +267,26 @@ package main
 import (
 	"net/http"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
-	"github.com/PayRam/activity-log/pkg/useractivity/ginmiddleware"
+	"github.com/PayRam/activity-log/pkg/activitylog"
+	"github.com/PayRam/activity-log/pkg/activitylog/ginmiddleware"
 	"github.com/gin-gonic/gin"
 )
 
-func wireGin(r *gin.Engine, client *useractivity.Client) {
+func wireGin(r *gin.Engine, client *activitylog.Client) {
 	r.Use(ginmiddleware.Middleware(ginmiddleware.Config{
 		Client:              client,
 		CaptureRequestBody:  true,
 		CaptureResponseBody: true,
 		MaxBodyBytes:        1 * 1024 * 1024,
-		Redact:              useractivity.RedactDefaultJSONKeys,
-		ResponseRedact:      useractivity.RedactDefaultJSONKeys,
+		Redact:              activitylog.RedactDefaultJSONKeys,
+		ResponseRedact:      activitylog.RedactDefaultJSONKeys,
 		SkipPaths:           []string{"/signin", "/signup", "/oauth/token"},
-		CreateEnricher: func(c *gin.Context, req *useractivity.CreateRequest) {
+		CreateEnricher: func(c *gin.Context, req *activitylog.CreateRequest) {
 			memberID := uint(77)
 			req.MemberID = &memberID
 			req.ProjectIDs = []uint{101}
 		},
-		UpdateEnricher: func(c *gin.Context, req *useractivity.UpdateRequest, resp *ginmiddleware.CapturedResponse) {
+		UpdateEnricher: func(c *gin.Context, req *activitylog.UpdateRequest, resp *ginmiddleware.CapturedResponse) {
 			if resp.StatusCode >= http.StatusBadRequest && req.Description == nil {
 				msg := "request failed"
 				req.Description = &msg
@@ -296,19 +304,19 @@ package main
 import (
 	"net/http"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
-	"github.com/PayRam/activity-log/pkg/useractivity/httpmiddleware"
+	"github.com/PayRam/activity-log/pkg/activitylog"
+	"github.com/PayRam/activity-log/pkg/activitylog/httpmiddleware"
 )
 
-func wrapHTTP(next http.Handler, client *useractivity.Client) http.Handler {
+func wrapHTTP(next http.Handler, client *activitylog.Client) http.Handler {
 	mw := httpmiddleware.Middleware(httpmiddleware.Config{
 		Client:              client,
 		CaptureRequestBody:  true,
 		CaptureResponseBody: true,
 		MaxBodyBytes:        1 * 1024 * 1024,
 		SkipPaths:           []string{"/signin", "/signup"},
-		Redact:              useractivity.RedactDefaultJSONKeys,
-		ResponseRedact:      useractivity.RedactDefaultJSONKeys,
+		Redact:              activitylog.RedactDefaultJSONKeys,
+		ResponseRedact:      activitylog.RedactDefaultJSONKeys,
 	})
 	return mw(next)
 }
@@ -316,7 +324,7 @@ func wrapHTTP(next http.Handler, client *useractivity.Client) http.Handler {
 
 ## 6) Service Tracker (`ServiceTracker.Track`)
 
-File: `pkg/useractivity/service_tracker.go`.
+File: `pkg/activitylog/service_tracker.go`.
 
 Behavior:
 
@@ -335,20 +343,20 @@ package main
 import (
 	"context"
 
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	"github.com/PayRam/activity-log/pkg/activitylog"
 )
 
-func trackedOperation(ctx context.Context, client *useractivity.Client) error {
-	tracker := useractivity.NewServiceTracker(useractivity.ServiceTrackerConfig{Client: client})
+func trackedOperation(ctx context.Context, client *activitylog.Client) error {
+	tracker := activitylog.NewServiceTracker(activitylog.ServiceTrackerConfig{Client: client})
 	memberID := uint(77)
 	category := "PAYMENT"
 	name := "CREATE_PAYMENT_REQUEST"
 
-	return tracker.Track(ctx, useractivity.ServiceOperation{
+	return tracker.Track(ctx, activitylog.ServiceOperation{
 		Name:          "PaymentService.CreateNewPaymentRequest",
 		MemberID:      &memberID,
 		ProjectIDs:    []uint{101},
-		APIAction:     useractivity.APIActionWrite,
+		APIAction:     activitylog.APIActionWrite,
 		EventCategory: &category,
 		EventName:     &name,
 	}, func(ctx context.Context) error {
@@ -360,36 +368,36 @@ func trackedOperation(ctx context.Context, client *useractivity.Client) error {
 
 ## 7) Event Derivation
 
-File: `pkg/useractivity/event_deriver.go`.
+File: `pkg/activitylog/event_deriver.go`.
 
 You can use built-in derivation or provide your own function.
 
 ### Sample: custom event info deriver
 
 ```go
-client, err := useractivity.New(useractivity.Config{
+client, err := activitylog.New(activitylog.Config{
 	DB: db,
-	EventInfoDeriver: func(input useractivity.EventDeriverInput) useractivity.EventInfo {
+	EventInfoDeriver: func(input activitylog.EventDeriverInput) activitylog.EventInfo {
 		if input.Method == "POST" && input.Endpoint == "/api/v1/payment-request" {
-			return useractivity.EventInfo{
+			return activitylog.EventInfo{
 				EventCategory: "PAYMENT",
 				EventName:     "CREATE_PAYMENT_REQUEST",
 				Description:   "created payment request",
 			}
 		}
-		return useractivity.DefaultEventInfoDeriver(input)
+		return activitylog.DefaultEventInfoDeriver(input)
 	},
 })
 ```
 
 ## 8) Geolocation
 
-File: `pkg/useractivity/geolocation.go`.
+File: `pkg/activitylog/geolocation.go`.
 
 ### Sample: lookup + enrich request
 
 ```go
-lookup := useractivity.NewGeoLookup(useractivity.GeoLookupConfig{
+lookup := activitylog.NewGeoLookup(activitylog.GeoLookupConfig{
 	ProviderURLTemplate: "https://ipwhois.app/json/%s",
 	ProviderName:        "ipwhois.io",
 	Timeout:             5 * time.Second,
@@ -398,8 +406,8 @@ lookup := useractivity.NewGeoLookup(useractivity.GeoLookupConfig{
 
 loc := lookup.Lookup("8.8.8.8")
 if loc != nil {
-	useractivity.EnrichCreateRequestWithLocation(&createReq, loc)
-	useractivity.EnrichUpdateRequestWithLocation(&updateReq, loc)
+	activitylog.EnrichCreateRequestWithLocation(&createReq, loc)
+	activitylog.EnrichUpdateRequestWithLocation(&updateReq, loc)
 }
 ```
 
@@ -413,25 +421,25 @@ Environment fallbacks when config values are empty:
 ### Sample: merge metadata safely
 
 ```go
-meta := useractivity.MergeMetadata(nil, map[string]any{
+meta := activitylog.MergeMetadata(nil, map[string]any{
 	"service": "PaymentService",
 	"step":    "CreateNewPaymentRequest",
 })
 
-req := useractivity.UpdateRequest{SessionID: "sess-123", Metadata: meta}
+req := activitylog.UpdateRequest{SessionID: "sess-123", Metadata: meta}
 ```
 
 ### Sample: redact JSON payload
 
 ```go
 raw := []byte(`{"email":"a@b.com","password":"secret","token":"jwt"}`)
-redacted := useractivity.RedactDefaultJSONKeys(raw)
+redacted := activitylog.RedactDefaultJSONKeys(raw)
 // password/token will be masked
 ```
 
 ## 10) Error Model
 
-File: `pkg/useractivity/errors.go`.
+File: `pkg/activitylog/errors.go`.
 
 - `ErrUnauthorized`
 - `ErrBadRequest`

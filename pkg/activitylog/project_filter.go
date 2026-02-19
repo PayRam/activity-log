@@ -1,4 +1,4 @@
-package useractivity
+package activitylog
 
 // ProjectFilter is the enum for project ID filtering semantics.
 type ProjectFilter string

@@ -17,7 +17,7 @@ import (
 	"github.com/PayRam/activity-log/internal/models"
 	"github.com/PayRam/activity-log/internal/repositories"
 	"github.com/PayRam/activity-log/internal/services"
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	activitylog "github.com/PayRam/activity-log/pkg/activitylog"
 	"github.com/gin-gonic/gin"
 )
 
@@ -159,7 +159,7 @@ func (s *stubService) GetEventCategories(ctx context.Context) ([]string, error) 
 	return nil, nil
 }
 
-func setClientService(t *testing.T, client *useractivity.Client, svc services.ActivityLogService) {
+func setClientService(t *testing.T, client *activitylog.Client, svc services.ActivityLogService) {
 	t.Helper()
 	v := reflect.ValueOf(client).Elem().FieldByName("svc")
 	if !v.IsValid() {
@@ -168,9 +168,9 @@ func setClientService(t *testing.T, client *useractivity.Client, svc services.Ac
 	reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Set(reflect.ValueOf(svc))
 }
 
-func newTestClient(t *testing.T, svc services.ActivityLogService) *useractivity.Client {
+func newTestClient(t *testing.T, svc services.ActivityLogService) *activitylog.Client {
 	t.Helper()
-	client := &useractivity.Client{}
+	client := &activitylog.Client{}
 	setClientService(t, client, svc)
 	return client
 }
@@ -191,10 +191,10 @@ func TestMiddlewareCaptureAndEnrich(t *testing.T) {
 		IPExtractor: func(c *gin.Context) string {
 			return "1.2.3.4"
 		},
-		CreateEnricher: func(c *gin.Context, req *useractivity.CreateRequest) {
-			req.APIStatus = useractivity.APIStatusSuccess
+		CreateEnricher: func(c *gin.Context, req *activitylog.CreateRequest) {
+			req.APIStatus = activitylog.APIStatusSuccess
 		},
-		UpdateEnricher: func(c *gin.Context, req *useractivity.UpdateRequest, resp *CapturedResponse) {
+		UpdateEnricher: func(c *gin.Context, req *activitylog.UpdateRequest, resp *CapturedResponse) {
 			if resp != nil && resp.StatusCode == http.StatusCreated {
 				msg := "created"
 				req.Description = &msg
@@ -203,7 +203,7 @@ func TestMiddlewareCaptureAndEnrich(t *testing.T) {
 	}))
 
 	router.POST("/test", func(c *gin.Context) {
-		if sessionID, ok := useractivity.SessionIDFromContext(c.Request.Context()); ok {
+		if sessionID, ok := activitylog.SessionIDFromContext(c.Request.Context()); ok {
 			contextSessionID = sessionID
 		}
 		c.String(http.StatusCreated, "ok")
@@ -247,6 +247,33 @@ func TestMiddlewareCaptureAndEnrich(t *testing.T) {
 	}
 }
 
+func TestMiddlewareUsesDefaultConfig(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ResetDefaultConfig()
+	t.Cleanup(ResetDefaultConfig)
+
+	svc := &stubService{}
+	client := newTestClient(t, svc)
+	SetDefaultConfig(Config{Client: client})
+
+	router := gin.New()
+	router.Use(Middleware())
+	router.GET("/default", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/default", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if len(svc.created) != 1 || len(svc.updated) != 1 {
+		t.Fatalf("expected create/update calls via default config, got %d/%d", len(svc.created), len(svc.updated))
+	}
+}
+
 func TestMiddlewareResponseRedact(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &stubService{}
@@ -256,7 +283,7 @@ func TestMiddlewareResponseRedact(t *testing.T) {
 	router.Use(Middleware(Config{
 		Client:              client,
 		CaptureResponseBody: true,
-		ResponseRedact:      useractivity.RedactDefaultJSONKeys,
+		ResponseRedact:      activitylog.RedactDefaultJSONKeys,
 	}))
 
 	router.GET("/test", func(c *gin.Context) {
@@ -359,7 +386,7 @@ func TestMiddlewareGeoLookup(t *testing.T) {
 		}),
 	}
 
-	lookup := useractivity.NewGeoLookup(useractivity.GeoLookupConfig{
+	lookup := activitylog.NewGeoLookup(activitylog.GeoLookupConfig{
 		ProviderURLTemplate: "https://geo.local/json/%s",
 		HTTPClient:          geoClient,
 	})

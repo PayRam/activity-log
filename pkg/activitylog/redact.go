@@ -1,4 +1,4 @@
-package useractivity
+package activitylog
 
 import internalutils "github.com/PayRam/activity-log/internal/utils"
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/PayRam/activity-log/internal/middleware"
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	activitylog "github.com/PayRam/activity-log/pkg/activitylog"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -17,9 +17,9 @@ type ContextKey string
 
 const (
 	// SessionIDContextKey stores the generated session ID in the request context.
-	SessionIDContextKey ContextKey = "useractivity_session_id"
+	SessionIDContextKey ContextKey = "activitylog_session_id"
 	// RequestBodyContextKey stores the captured request body string in the request context.
-	RequestBodyContextKey ContextKey = "useractivity_request_body"
+	RequestBodyContextKey ContextKey = "activitylog_request_body"
 )
 
 // CapturedResponse contains response details captured by middleware.
@@ -30,7 +30,7 @@ type CapturedResponse struct {
 
 // Config configures the net/http middleware.
 type Config struct {
-	Client *useractivity.Client
+	Client *activitylog.Client
 	Logger *zap.Logger
 
 	CaptureRequestBody  bool
@@ -46,16 +46,18 @@ type Config struct {
 	SessionIDFunc   func(*http.Request) string
 	IPExtractor     func(*http.Request) string
 
-	CreateEnricher func(*http.Request, *useractivity.CreateRequest)
-	UpdateEnricher func(*http.Request, *useractivity.UpdateRequest, *CapturedResponse)
-	GeoLookup      *useractivity.GeoLookup
+	CreateEnricher func(*http.Request, *activitylog.CreateRequest)
+	UpdateEnricher func(*http.Request, *activitylog.UpdateRequest, *CapturedResponse)
+	GeoLookup      *activitylog.GeoLookup
 
 	Async   bool
 	OnError func(error)
 }
 
 // Middleware returns a net/http middleware that logs activity log.
-func Middleware(cfg Config) func(http.Handler) http.Handler {
+// When called without args, it uses the package default config set by SetDefaultConfig.
+func Middleware(configs ...Config) func(http.Handler) http.Handler {
+	cfg := resolveConfig(configs)
 	if cfg.Client == nil {
 		return func(next http.Handler) http.Handler { return next }
 	}
@@ -84,7 +86,7 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 			sessionID := resolveSessionID(cfg, r)
 			ctx := context.WithValue(r.Context(), SessionIDContextKey, sessionID)
-			ctx = useractivity.WithSessionID(ctx, sessionID)
+			ctx = activitylog.WithSessionID(ctx, sessionID)
 			r = r.WithContext(ctx)
 
 			requestBody, err := readRequestBody(cfg, r, maxBytes)
@@ -100,19 +102,19 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 			userAgent := r.UserAgent()
 			referer := r.Referer()
 
-			createReq := useractivity.CreateRequest{
+			createReq := activitylog.CreateRequest{
 				SessionID:   sessionID,
 				Method:      r.Method,
 				Endpoint:    r.URL.Path,
 				APIAction:   middleware.MethodToAction(r.Method),
-				APIStatus:   useractivity.APIStatusSuccess,
+				APIStatus:   activitylog.APIStatusSuccess,
 				RequestBody: requestBody,
 			}
 
 			if ip != "" {
 				createReq.IPAddress = &ip
 				if cfg.GeoLookup != nil {
-					useractivity.EnrichCreateRequestWithLocation(&createReq, cfg.GeoLookup.Lookup(ip))
+					activitylog.EnrichCreateRequestWithLocation(&createReq, cfg.GeoLookup.Lookup(ip))
 				}
 			}
 			if userAgent != "" {
@@ -150,11 +152,11 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 			status := recorder.Status()
 			body := recorder.Body()
-			apiStatus := useractivity.APIStatus(middleware.StatusToAPIStatus(status))
+			apiStatus := activitylog.APIStatus(middleware.StatusToAPIStatus(status))
 			method := r.Method
 			endpoint := r.URL.Path
-			statusCode := useractivity.HTTPStatusCode(status)
-			updateReq := useractivity.UpdateRequest{
+			statusCode := activitylog.HTTPStatusCode(status)
+			updateReq := activitylog.UpdateRequest{
 				SessionID:   sessionID,
 				Method:      &method,
 				Endpoint:    &endpoint,
@@ -208,6 +210,16 @@ func resolveIP(cfg Config, r *http.Request) string {
 		return cfg.IPExtractor(r)
 	}
 	return DefaultIPExtractor(r)
+}
+
+func resolveConfig(configs []Config) Config {
+	if len(configs) > 0 {
+		return configs[0]
+	}
+	if cfg, ok := loadDefaultConfig(); ok {
+		return cfg
+	}
+	return Config{}
 }
 
 // DefaultIPExtractor uses common proxy headers, then RemoteAddr.
@@ -267,6 +279,6 @@ func handleError(cfg Config, logger *zap.Logger, err error) {
 		return
 	}
 	if logger != nil {
-		logger.Error("useractivity middleware error", zap.Error(err))
+		logger.Error("activitylog middleware error", zap.Error(err))
 	}
 }

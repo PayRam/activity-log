@@ -17,7 +17,7 @@ import (
 	"github.com/PayRam/activity-log/internal/models"
 	"github.com/PayRam/activity-log/internal/repositories"
 	"github.com/PayRam/activity-log/internal/services"
-	"github.com/PayRam/activity-log/pkg/useractivity"
+	activitylog "github.com/PayRam/activity-log/pkg/activitylog"
 )
 
 type stubService struct {
@@ -158,7 +158,7 @@ func (s *stubService) GetEventCategories(ctx context.Context) ([]string, error) 
 	return nil, nil
 }
 
-func setClientService(t *testing.T, client *useractivity.Client, svc services.ActivityLogService) {
+func setClientService(t *testing.T, client *activitylog.Client, svc services.ActivityLogService) {
 	t.Helper()
 	v := reflect.ValueOf(client).Elem().FieldByName("svc")
 	if !v.IsValid() {
@@ -167,9 +167,9 @@ func setClientService(t *testing.T, client *useractivity.Client, svc services.Ac
 	reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Set(reflect.ValueOf(svc))
 }
 
-func newTestClient(t *testing.T, svc services.ActivityLogService) *useractivity.Client {
+func newTestClient(t *testing.T, svc services.ActivityLogService) *activitylog.Client {
 	t.Helper()
-	client := &useractivity.Client{}
+	client := &activitylog.Client{}
 	setClientService(t, client, svc)
 	return client
 }
@@ -180,7 +180,7 @@ func TestMiddlewareCaptureAndEnrich(t *testing.T) {
 	var contextSessionID string
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if sessionID, ok := useractivity.SessionIDFromContext(r.Context()); ok {
+		if sessionID, ok := activitylog.SessionIDFromContext(r.Context()); ok {
 			contextSessionID = sessionID
 		}
 		w.WriteHeader(http.StatusAccepted)
@@ -193,10 +193,10 @@ func TestMiddlewareCaptureAndEnrich(t *testing.T) {
 		CaptureResponseBody: true,
 		MaxBodyBytes:        1024,
 		SessionIDHeader:     "X-Session-ID",
-		CreateEnricher: func(r *http.Request, req *useractivity.CreateRequest) {
-			req.APIStatus = useractivity.APIStatusSuccess
+		CreateEnricher: func(r *http.Request, req *activitylog.CreateRequest) {
+			req.APIStatus = activitylog.APIStatusSuccess
 		},
-		UpdateEnricher: func(r *http.Request, req *useractivity.UpdateRequest, resp *CapturedResponse) {
+		UpdateEnricher: func(r *http.Request, req *activitylog.UpdateRequest, resp *CapturedResponse) {
 			if resp != nil && resp.StatusCode == http.StatusAccepted {
 				msg := "accepted"
 				req.Description = &msg
@@ -228,6 +228,31 @@ func TestMiddlewareCaptureAndEnrich(t *testing.T) {
 	}
 }
 
+func TestMiddlewareUsesDefaultConfig(t *testing.T) {
+	ResetDefaultConfig()
+	t.Cleanup(ResetDefaultConfig)
+
+	svc := &stubService{}
+	client := newTestClient(t, svc)
+	SetDefaultConfig(Config{Client: client})
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/default", nil)
+	rec := httptest.NewRecorder()
+	Middleware()(handler).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if len(svc.created) != 1 || len(svc.updated) != 1 {
+		t.Fatalf("expected create/update calls via default config, got %d/%d", len(svc.created), len(svc.updated))
+	}
+}
+
 func TestMiddlewareResponseRedact(t *testing.T) {
 	svc := &stubService{}
 	client := newTestClient(t, svc)
@@ -241,7 +266,7 @@ func TestMiddlewareResponseRedact(t *testing.T) {
 	mw := Middleware(Config{
 		Client:              client,
 		CaptureResponseBody: true,
-		ResponseRedact:      useractivity.RedactDefaultJSONKeys,
+		ResponseRedact:      activitylog.RedactDefaultJSONKeys,
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -359,7 +384,7 @@ func TestMiddlewareGeoLookup(t *testing.T) {
 		}),
 	}
 
-	lookup := useractivity.NewGeoLookup(useractivity.GeoLookupConfig{
+	lookup := activitylog.NewGeoLookup(activitylog.GeoLookupConfig{
 		ProviderURLTemplate: "https://geo.local/json/%s",
 		HTTPClient:          geoClient,
 	})
