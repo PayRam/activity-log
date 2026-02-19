@@ -22,6 +22,9 @@ func NewActivityLogServiceImpl(repo repositories.ActivityLogRepository, logger *
 
 // Create persists a new activity record.
 func (s *ActivityLogServiceImpl) CreateActivityLogs(ctx context.Context, params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
+	if err := validateHTTPStatusCode(params.StatusCode); err != nil {
+		return nil, err
+	}
 
 	activity := &models.ActivityLog{
 		MemberID:      params.MemberID,
@@ -62,8 +65,8 @@ func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context,
 	if params.SessionID == "" {
 		return nil, fmt.Errorf("session_id is required")
 	}
-	if params.StatusCode != nil && (*params.StatusCode < 100 || *params.StatusCode > 599) {
-		return nil, fmt.Errorf("status_code must be a valid HTTP status code")
+	if err := validateHTTPStatusCode(params.StatusCode); err != nil {
+		return nil, err
 	}
 
 	fields := &repositories.ActivityLogUpdateFields{
@@ -114,4 +117,14 @@ func (s *ActivityLogServiceImpl) GetActivityLogs(ctx context.Context, filter rep
 // GetEventCategories retrieves distinct event categories.
 func (s *ActivityLogServiceImpl) GetEventCategories(ctx context.Context) ([]string, error) {
 	return s.repo.GetEventCategories(ctx)
+}
+
+func validateHTTPStatusCode(statusCode *int) error {
+	if statusCode == nil {
+		return nil
+	}
+	if *statusCode < 100 || *statusCode > 599 {
+		return fmt.Errorf("status_code must be a valid HTTP status code")
+	}
+	return nil
 }
