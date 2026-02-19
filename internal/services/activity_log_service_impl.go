@@ -22,9 +22,6 @@ func NewActivityLogServiceImpl(repo repositories.ActivityLogRepository, logger *
 
 // Create persists a new activity record.
 func (s *ActivityLogServiceImpl) CreateActivityLogs(ctx context.Context, params repositories.CreateActivityLogParams) (*models.ActivityLog, error) {
-	if params.StatusCode != nil && (*params.StatusCode < 100 || *params.StatusCode > 599) {
-		return nil, fmt.Errorf("status_code must be a valid HTTP status code")
-	}
 
 	activity := &models.ActivityLog{
 		MemberID:      params.MemberID,
