@@ -94,8 +94,8 @@ func TestActivityLogRepositoryUpdateMissingRecord(t *testing.T) {
 	db := newPostgresDB(t)
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	activity := &models.ActivityLog{SessionID: "missing-session"}
-	if _, err := repo.UpdateActivityLogSessionID(context.Background(), activity); err == nil {
+	update := &UpdateActivityLogSessionModel{SessionID: "missing-session"}
+	if _, err := repo.UpdateActivityLogSessionID(context.Background(), update); err == nil {
 		t.Fatalf("expected error for missing session_id record")
 	}
 }
@@ -108,16 +108,16 @@ func TestActivityLogRepositoryUpdateDryRun(t *testing.T) {
 	action := "READ"
 	method := "GET"
 	apiPart := "/ping"
-	activity := &models.ActivityLog{
+	update := &UpdateActivityLogSessionModel{
 		SessionID: "sess-1",
-		UpdateFields: map[string]interface{}{
-			"api_status": status,
-			"api_action": action,
-			"method":     method,
-			"api_part":   apiPart,
+		Fields: &ActivityLogUpdateFields{
+			APIStatus: &status,
+			APIAction: &action,
+			Method:    &method,
+			APIPart:   &apiPart,
 		},
 	}
-	if _, err := repo.UpdateActivityLogSessionID(context.Background(), activity); err != nil {
+	if _, err := repo.UpdateActivityLogSessionID(context.Background(), update); err != nil {
 		t.Fatalf("expected no error in dry run, got %v", err)
 	}
 }
@@ -142,11 +142,11 @@ func TestActivityLogRepositoryUpdateProjectIDsNullable(t *testing.T) {
 		t.Fatalf("expected created record")
 	}
 
-	var nilProjects []uint
-	updated, err := repo.UpdateActivityLogSessionID(context.Background(), &models.ActivityLog{
+	var nilProjects models.UintSlice
+	updated, err := repo.UpdateActivityLogSessionID(context.Background(), &UpdateActivityLogSessionModel{
 		SessionID: "sess-nullable",
-		UpdateFields: map[string]interface{}{
-			"project_ids": models.UintSlice(nilProjects),
+		Fields: &ActivityLogUpdateFields{
+			ProjectIDs: &nilProjects,
 		},
 	})
 	if err != nil {

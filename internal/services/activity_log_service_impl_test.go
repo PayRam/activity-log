@@ -17,7 +17,7 @@ type fakeRepo struct {
 	catCalled    bool
 
 	lastCreate *models.ActivityLog
-	lastUpdate *models.ActivityLog
+	lastUpdate *repositories.UpdateActivityLogSessionModel
 
 	createErr error
 	updateErr error
@@ -38,13 +38,13 @@ func (f *fakeRepo) CreateActivityLogs(ctx context.Context, activity *models.Acti
 	return &models.ActivityLog{SessionID: activity.SessionID}, nil
 }
 
-func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, update *repositories.UpdateActivityLogSessionModel) (*models.ActivityLog, error) {
 	f.updateCalled = true
-	f.lastUpdate = activity
+	f.lastUpdate = update
 	if f.updateErr != nil {
 		return nil, f.updateErr
 	}
-	return &models.ActivityLog{SessionID: activity.SessionID}, nil
+	return &models.ActivityLog{SessionID: update.SessionID}, nil
 }
 
 func (f *fakeRepo) GetActivityLogs(ctx context.Context, filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
@@ -100,9 +100,8 @@ func TestActivityLogServicePassThrough(t *testing.T) {
 	if repo.lastUpdate == nil || repo.lastUpdate.SessionID != "s1" {
 		t.Fatalf("expected update session to be mapped")
 	}
-	methodValue, ok := repo.lastUpdate.UpdateFields["method"]
-	if !ok || methodValue != "PATCH" {
-		t.Fatalf("expected service to map update params into update fields")
+	if repo.lastUpdate.Fields == nil || repo.lastUpdate.Fields.Method == nil || *repo.lastUpdate.Fields.Method != "PATCH" {
+		t.Fatalf("expected service to map update params into update model")
 	}
 
 	activities, total, err := svc.GetActivityLogs(context.Background(), repositories.ActivityLogFilters{})

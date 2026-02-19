@@ -33,38 +33,36 @@ func (r *ActivityLogRepositoryImpl) CreateActivityLogs(ctx context.Context, acti
 }
 
 // UpdateActivityLogSessionID updates an activity record by session ID with row locking.
-func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
+func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Context, update *UpdateActivityLogSessionModel) (*models.ActivityLog, error) {
 	var updated models.ActivityLog
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("session_id = ?", activity.SessionID).
+			Where("session_id = ?", update.SessionID).
 			First(&updated).Error; err != nil {
 			if r.logger != nil {
-				r.logger.Error("Failed to lock activity log", zap.String("session_id", activity.SessionID), zap.Error(err))
+				r.logger.Error("Failed to lock activity log", zap.String("session_id", update.SessionID), zap.Error(err))
 			}
-			return fmt.Errorf("failed to lock activity with session_id %s: %w", activity.SessionID, err)
+			return fmt.Errorf("failed to lock activity with session_id %s: %w", update.SessionID, err)
 		}
 
-		updates := activity.UpdateFields
-
-		if len(updates) > 0 {
+		if update.Fields != nil {
 			if err := tx.Model(&models.ActivityLog{}).
-				Where("session_id = ?", activity.SessionID).
-				Updates(updates).Error; err != nil {
+				Where("session_id = ?", update.SessionID).
+				Updates(update.Fields).Error; err != nil {
 				if r.logger != nil {
-					r.logger.Error("Failed to update activity log", zap.String("session_id", activity.SessionID), zap.Error(err))
+					r.logger.Error("Failed to update activity log", zap.String("session_id", update.SessionID), zap.Error(err))
 				}
-				return fmt.Errorf("failed to update activity with session_id %s: %w", activity.SessionID, err)
+				return fmt.Errorf("failed to update activity with session_id %s: %w", update.SessionID, err)
 			}
 		}
 
-		return tx.Where("session_id = ?", activity.SessionID).First(&updated).Error
+		return tx.Where("session_id = ?", update.SessionID).First(&updated).Error
 	})
 
 	if err != nil {
 		if r.logger != nil {
-			r.logger.Error("UpdateActivityLogSessionID failed", zap.String("session_id", activity.SessionID), zap.Error(err))
+			r.logger.Error("UpdateActivityLogSessionID failed", zap.String("session_id", update.SessionID), zap.Error(err))
 		}
 		return nil, err
 	}

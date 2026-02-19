@@ -46,9 +46,6 @@ type ActivityLog struct {
 	Timezone    *string  `gorm:"size:100"`
 	Latitude    *float64 `gorm:"type:decimal(10,7)"`
 	Longitude   *float64 `gorm:"type:decimal(10,7)"`
-
-	// UpdateFields is prepared in service layer and consumed by repository update path.
-	UpdateFields map[string]interface{} `gorm:"-" json:"-"`
 }
 
 // TableName applies the configured table prefix.
