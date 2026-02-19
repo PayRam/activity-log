@@ -2,5 +2,5 @@ package activitylog
 
 const (
 	DefaultGetLimit                 = 100
-	ConfigKeyActivityLogExportLimit = "user.activity.export.limit"
+	ConfigKeyActivityLogExportLimit = "activity.log.export.limit"
 )

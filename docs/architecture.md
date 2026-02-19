@@ -98,7 +98,7 @@ This keeps integration naming closer to product language while preserving storag
 ## Operational Characteristics
 
 - Default read limit: `100`.
-- Export limit can be overridden by config key `user.activity.export.limit`.
+- Export limit can be overridden by config key `activity.log.export.limit`.
 - Read queries support IDs, session IDs, status code arrays, event arrays, date ranges, sorting.
 - Middleware body capture is bounded by max bytes.
 - Geolocation lookup is cached in-memory.

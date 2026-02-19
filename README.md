@@ -130,7 +130,7 @@ Dependency direction:
 - `EventDeriver EventDeriver` (optional): derives `EventCategory`/`EventName` on `Create` when those fields are missing
 - `EventInfoDeriver EventInfoDeriver` (optional): derives `EventCategory`/`EventName`/`Description` on `Create` and `Update` when those fields are missing
 - `AccessResolver AccessResolver` (optional): applies `Get` access scoping
-- `ConfigProvider ConfigProvider` (optional): can override export limit (`user.activity.export.limit`)
+- `ConfigProvider ConfigProvider` (optional): can override export limit (`activity.log.export.limit`)
 - `MemberResolver MemberResolver` (optional): hydrates `Activity.Member` in `Get`
 - `ProjectResolver ProjectResolver` (optional): hydrates `Activity.Projects` in `Get`
 
@@ -370,7 +370,7 @@ Supported filters:
 Behavior:
 
 - default `Limit` is `100`
-- export mode can use config key `user.activity.export.limit`
+- export mode can use config key `activity.log.export.limit`
 - if `AccessResolver` is configured, non-admin scope is enforced
 
 ### `GetEventCategories(ctx)`
