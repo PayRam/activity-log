@@ -97,8 +97,12 @@ func TestActivityLogServicePassThrough(t *testing.T) {
 	if !repo.updateCalled {
 		t.Fatalf("expected update to be called")
 	}
-	if repo.lastUpdate == nil || repo.lastUpdate.SessionID != "s1" || !repo.lastUpdate.MethodSet || repo.lastUpdate.Method != "PATCH" {
-		t.Fatalf("expected service to map update params into model with update masks")
+	if repo.lastUpdate == nil || repo.lastUpdate.SessionID != "s1" {
+		t.Fatalf("expected update session to be mapped")
+	}
+	methodValue, ok := repo.lastUpdate.UpdateFields["method"]
+	if !ok || methodValue != "PATCH" {
+		t.Fatalf("expected service to map update params into update fields")
 	}
 
 	activities, total, err := svc.GetActivityLogs(context.Background(), repositories.ActivityLogFilters{})

@@ -69,49 +69,86 @@ func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context,
 		return nil, fmt.Errorf("status_code must be a valid HTTP status code")
 	}
 
-	activity := &models.ActivityLog{
-		SessionID:     params.SessionID,
-		MemberID:      params.MemberID,
-		StatusCode:    params.StatusCode,
-		Description:   params.Description,
-		APIErrorMsg:   params.APIErrorMsg,
-		IPAddress:     params.IPAddress,
-		UserAgent:     params.UserAgent,
-		Referer:       params.Referer,
-		ResponseBody:  params.ResponseBody,
-		Metadata:      params.Metadata,
-		RequestBody:   params.RequestBody,
-		Role:          params.Role,
-		EventCategory: params.EventCategory,
-		EventName:     params.EventName,
-		Country:       params.Country,
-		CountryCode:   params.CountryCode,
-		Region:        params.Region,
-		City:          params.City,
-		Timezone:      params.Timezone,
-		Latitude:      params.Latitude,
-		Longitude:     params.Longitude,
-	}
-
+	updates := make(map[string]interface{})
 	if params.ProjectIDs != nil {
-		activity.ProjectIDsSet = true
-		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+		updates["project_ids"] = models.UintSlice(*params.ProjectIDs)
+	}
+	if params.MemberID != nil {
+		updates["member_id"] = *params.MemberID
 	}
 	if params.Method != nil {
-		activity.MethodSet = true
-		activity.Method = *params.Method
+		updates["method"] = *params.Method
 	}
 	if params.APIPart != nil {
-		activity.APIPartSet = true
-		activity.APIPart = *params.APIPart
+		updates["api_part"] = *params.APIPart
 	}
 	if params.APIAction != nil {
-		activity.APIActionSet = true
-		activity.APIAction = *params.APIAction
+		updates["api_action"] = *params.APIAction
 	}
 	if params.APIStatus != nil {
-		activity.APIStatusSet = true
-		activity.APIStatus = *params.APIStatus
+		updates["api_status"] = *params.APIStatus
+	}
+	if params.StatusCode != nil {
+		updates["status_code"] = *params.StatusCode
+	}
+	if params.Description != nil {
+		updates["description"] = *params.Description
+	}
+	if params.APIErrorMsg != nil {
+		updates["api_error_msg"] = *params.APIErrorMsg
+	}
+	if params.IPAddress != nil {
+		updates["ip_address"] = *params.IPAddress
+	}
+	if params.UserAgent != nil {
+		updates["user_agent"] = *params.UserAgent
+	}
+	if params.Referer != nil {
+		updates["referer"] = *params.Referer
+	}
+	if params.ResponseBody != nil {
+		updates["response_body"] = *params.ResponseBody
+	}
+	if params.Metadata != nil {
+		updates["metadata"] = *params.Metadata
+	}
+	if params.RequestBody != nil {
+		updates["request_body"] = *params.RequestBody
+	}
+	if params.Role != nil {
+		updates["role"] = *params.Role
+	}
+	if params.EventCategory != nil {
+		updates["event_category"] = *params.EventCategory
+	}
+	if params.EventName != nil {
+		updates["event_name"] = *params.EventName
+	}
+	if params.Country != nil {
+		updates["country"] = *params.Country
+	}
+	if params.CountryCode != nil {
+		updates["country_code"] = *params.CountryCode
+	}
+	if params.Region != nil {
+		updates["region"] = *params.Region
+	}
+	if params.City != nil {
+		updates["city"] = *params.City
+	}
+	if params.Timezone != nil {
+		updates["timezone"] = *params.Timezone
+	}
+	if params.Latitude != nil {
+		updates["latitude"] = *params.Latitude
+	}
+	if params.Longitude != nil {
+		updates["longitude"] = *params.Longitude
+	}
+
+	activity := &models.ActivityLog{
+		SessionID:    params.SessionID,
+		UpdateFields: updates,
 	}
 
 	return s.repo.UpdateActivityLogSessionID(ctx, activity)

@@ -23,9 +23,6 @@ func NewActivityLogRepository(db *gorm.DB, logger *zap.Logger) *ActivityLogRepos
 
 // Create inserts a new activity record.
 func (r *ActivityLogRepositoryImpl) CreateActivityLogs(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	if activity == nil {
-		return nil, fmt.Errorf("activity is required")
-	}
 	if result := r.db.WithContext(ctx).Create(activity); result.Error != nil {
 		if r.logger != nil {
 			r.logger.Error("Failed to create activity log", zap.Error(result.Error))
@@ -37,13 +34,6 @@ func (r *ActivityLogRepositoryImpl) CreateActivityLogs(ctx context.Context, acti
 
 // UpdateActivityLogSessionID updates an activity record by session ID with row locking.
 func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Context, activity *models.ActivityLog) (*models.ActivityLog, error) {
-	if activity == nil {
-		return nil, fmt.Errorf("activity is required")
-	}
-	if activity.SessionID == "" {
-		return nil, fmt.Errorf("session_id is required")
-	}
-
 	var updated models.ActivityLog
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -56,82 +46,7 @@ func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Conte
 			return fmt.Errorf("failed to lock activity with session_id %s: %w", activity.SessionID, err)
 		}
 
-		updates := make(map[string]interface{})
-		if activity.ProjectIDsSet {
-			updates["project_ids"] = activity.ProjectIDs
-		}
-		if activity.MemberID != nil {
-			updates["member_id"] = *activity.MemberID
-		}
-		if activity.MethodSet {
-			updates["method"] = activity.Method
-		}
-		if activity.APIPartSet {
-			updates["api_part"] = activity.APIPart
-		}
-		if activity.APIActionSet {
-			updates["api_action"] = activity.APIAction
-		}
-		if activity.APIStatusSet {
-			updates["api_status"] = activity.APIStatus
-		}
-		if activity.StatusCode != nil {
-			updates["status_code"] = *activity.StatusCode
-		}
-		if activity.Description != nil {
-			updates["description"] = *activity.Description
-		}
-		if activity.APIErrorMsg != nil {
-			updates["api_error_msg"] = *activity.APIErrorMsg
-		}
-		if activity.IPAddress != nil {
-			updates["ip_address"] = *activity.IPAddress
-		}
-		if activity.UserAgent != nil {
-			updates["user_agent"] = *activity.UserAgent
-		}
-		if activity.Referer != nil {
-			updates["referer"] = *activity.Referer
-		}
-		if activity.ResponseBody != nil {
-			updates["response_body"] = *activity.ResponseBody
-		}
-		if activity.Metadata != nil {
-			updates["metadata"] = *activity.Metadata
-		}
-		if activity.RequestBody != nil {
-			updates["request_body"] = *activity.RequestBody
-		}
-		if activity.Role != nil {
-			updates["role"] = *activity.Role
-		}
-		if activity.EventCategory != nil {
-			updates["event_category"] = *activity.EventCategory
-		}
-		if activity.EventName != nil {
-			updates["event_name"] = *activity.EventName
-		}
-		if activity.Country != nil {
-			updates["country"] = *activity.Country
-		}
-		if activity.CountryCode != nil {
-			updates["country_code"] = *activity.CountryCode
-		}
-		if activity.Region != nil {
-			updates["region"] = *activity.Region
-		}
-		if activity.City != nil {
-			updates["city"] = *activity.City
-		}
-		if activity.Timezone != nil {
-			updates["timezone"] = *activity.Timezone
-		}
-		if activity.Latitude != nil {
-			updates["latitude"] = *activity.Latitude
-		}
-		if activity.Longitude != nil {
-			updates["longitude"] = *activity.Longitude
-		}
+		updates := activity.UpdateFields
 
 		if len(updates) > 0 {
 			if err := tx.Model(&models.ActivityLog{}).

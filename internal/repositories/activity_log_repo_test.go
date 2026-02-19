@@ -109,15 +109,13 @@ func TestActivityLogRepositoryUpdateDryRun(t *testing.T) {
 	method := "GET"
 	apiPart := "/ping"
 	activity := &models.ActivityLog{
-		SessionID:    "sess-1",
-		APIStatus:    status,
-		APIAction:    action,
-		Method:       method,
-		APIPart:      apiPart,
-		APIStatusSet: true,
-		APIActionSet: true,
-		MethodSet:    true,
-		APIPartSet:   true,
+		SessionID: "sess-1",
+		UpdateFields: map[string]interface{}{
+			"api_status": status,
+			"api_action": action,
+			"method":     method,
+			"api_part":   apiPart,
+		},
 	}
 	if _, err := repo.UpdateActivityLogSessionID(context.Background(), activity); err != nil {
 		t.Fatalf("expected no error in dry run, got %v", err)
@@ -146,9 +144,10 @@ func TestActivityLogRepositoryUpdateProjectIDsNullable(t *testing.T) {
 
 	var nilProjects []uint
 	updated, err := repo.UpdateActivityLogSessionID(context.Background(), &models.ActivityLog{
-		SessionID:     "sess-nullable",
-		ProjectIDsSet: true,
-		ProjectIDs:    models.UintSlice(nilProjects),
+		SessionID: "sess-nullable",
+		UpdateFields: map[string]interface{}{
+			"project_ids": models.UintSlice(nilProjects),
+		},
 	})
 	if err != nil {
 		t.Fatalf("update nullable project ids: %v", err)
