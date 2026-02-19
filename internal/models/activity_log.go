@@ -18,7 +18,7 @@ type ActivityLog struct {
 
 	// API request details
 	SessionID    string    `gorm:"size:100;index"`
-	ProjectIDs   UintSlice `gorm:"column:external_platform_ids;type:jsonb"`
+	ProjectIDs   UintSlice `gorm:"column:project_ids;type:jsonb"`
 	Method       string    `gorm:"size:10;not null"`
 	APIPart      string    `gorm:"size:255;not null"`
 	APIStatus    string    `gorm:"size:50;index;not null"`

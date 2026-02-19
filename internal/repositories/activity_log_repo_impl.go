@@ -79,7 +79,7 @@ func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Conte
 
 		updates := make(map[string]interface{})
 		if params.ProjectIDs != nil {
-			updates["external_platform_ids"] = models.UintSlice(*params.ProjectIDs)
+			updates["project_ids"] = models.UintSlice(*params.ProjectIDs)
 		}
 		if params.MemberID != nil {
 			updates["member_id"] = *params.MemberID

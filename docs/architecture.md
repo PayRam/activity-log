@@ -77,13 +77,11 @@ Correlation key is `session_id`.
 Rules for non-admin users:
 
 - Explicit `ProjectIDs`: every requested ID must be allowed.
-- `ProjectFilter=ALL`: expands to allowed project IDs.
-- `ProjectFilter=NO_IDS`: forces no-project records only.
 - No project filter: defaults to allowed project IDs.
 
 ## Naming Model
 
-Public API uses `ProjectIDs` while DB column remains `external_platform_ids` for backward compatibility.
+Public API uses `ProjectIDs` and DB column is `project_ids`.
 
 This keeps integration naming closer to product language while preserving storage compatibility.
 

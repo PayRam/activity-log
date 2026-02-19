@@ -206,10 +206,6 @@ func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequ
 		return GetResponse{}, fmt.Errorf("client is not initialized")
 	}
 
-	if len(req.ProjectIDs) > 0 && req.ProjectFilter != nil {
-		return GetResponse{}, ErrBadRequest
-	}
-
 	if memberID > 0 {
 		access, err := c.resolveAccess(ctx, memberID)
 		if err != nil {
@@ -234,7 +230,6 @@ func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequ
 		MemberIDs:       req.MemberIDs,
 		SessionIDs:      req.SessionIDs,
 		ProjectIDs:      req.ProjectIDs,
-		ProjectFilter:   projectFilterToRepository(req.ProjectFilter),
 		Limit:           req.PaginationConditions.Limit,
 		Offset:          req.PaginationConditions.Offset,
 		StartDate:       req.PaginationConditions.StartDate,
@@ -429,21 +424,8 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 		return nil
 	}
 
-	if req.ProjectFilter != nil {
-		switch *req.ProjectFilter {
-		case ProjectFilterNoIDs:
-			return ErrUnauthorized
-		case ProjectFilterAll:
-			if len(allowed) == 0 {
-				req.ProjectIDs = []uint{0}
-			} else {
-				req.ProjectIDs = allowed
-			}
-			req.ProjectFilter = nil
-			return nil
-		default:
-			return ErrUnauthorized
-		}
+	if req.ProjectIDs != nil {
+		return ErrUnauthorized
 	}
 
 	if len(allowed) == 0 {
@@ -452,14 +434,6 @@ func applyAccessScope(req *GetRequest, access *AccessContext) error {
 	}
 	req.ProjectIDs = allowed
 	return nil
-}
-
-func projectFilterToRepository(filter *ProjectFilter) *repositories.ProjectFilter {
-	if filter == nil {
-		return nil
-	}
-	converted := repositories.ProjectFilter(*filter)
-	return &converted
 }
 
 func (c *Client) mapActivities(ctx context.Context, modelsList []models.ActivityLog, total int64) (GetResponse, error) {

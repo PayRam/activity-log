@@ -148,7 +148,6 @@ type GetRequest struct {
 	IDS             []uint           `form:"ids"`
 	MemberIDs       []uint           `form:"memberIDs"`
 	ProjectIDs      []uint           `form:"projectIDs"`
-	ProjectFilter   *ProjectFilter   `form:"projectFilter"`
 	APIStatuses     []APIStatus      `form:"apiStatuses"`
 	IPAddresses     []string         `form:"ipAddresses"`
 	Countries       []string         `form:"countries"`

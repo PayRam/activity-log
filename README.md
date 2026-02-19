@@ -149,7 +149,6 @@ Common mapping:
 | `ProjectIDs` | `ProjectIDs` |
 | `ProjectResolver` | `ProjectResolver` |
 | `AccessContext.AllowedProjectIDs` | IDs of projects user can access |
-| `ProjectFilter` | project-scope filter behavior |
 
 Practical integration rule:
 
@@ -364,7 +363,7 @@ Implementation detail:
 Supported filters:
 
 - arrays: `StatusCodes` (query key: `statusCode` repeated), `EventCategories`, `Methods`, `EventNames`, `IDS`, `MemberIDs`, `ProjectIDs`, `SessionIDs`, `APIStatuses`, `IPAddresses`, `Countries`, `Roles`
-- exact/single: `Search`, `ProjectFilter`
+- exact/single: `Search`
 - pagination/time: `Limit`, `Offset`, `SortBy`, `Order`, `GreaterThanID`, `LessThanID`, `CreatedAfter`, `CreatedBefore`, `UpdatedAfter`, `UpdatedBefore`, `StartDate`, `EndDate`
 - internal flag: `Export`
 
@@ -372,10 +371,7 @@ Behavior:
 
 - default `Limit` is `100`
 - export mode can use config key `user.activity.export.limit`
-- if both `ProjectIDs` and `ProjectFilter` are set, request is rejected
 - if `AccessResolver` is configured, non-admin scope is enforced
-- supported `ProjectFilter` values are `ALL` and `NO_IDS`
-- unknown `ProjectFilter` values are rejected as unauthorized
 
 ### `GetEventCategories(ctx)`
 
@@ -615,7 +611,6 @@ Important:
 Package-level errors:
 
 - `ErrUnauthorized`
-- `ErrBadRequest`
 
 ## Migration
 

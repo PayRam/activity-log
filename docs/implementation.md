@@ -214,16 +214,13 @@ func listExample(client *activitylog.Client) (activitylog.GetResponse, error) {
 	sortBy := "created_at"
 	order := "DESC"
 
-	pf := activitylog.ProjectFilterAll
-
 	return client.GetActivityLogs(context.Background(), 77, activitylog.GetRequest{
 		StatusCodes: []activitylog.HTTPStatusCode{
 			activitylog.HTTPStatusCode(http.StatusOK),
 			activitylog.HTTPStatusCode(http.StatusBadRequest),
 		},
-		Methods:       []string{http.MethodGet, http.MethodPost},
-		EventNames:    []string{"PAYMENT_CREATE", "WITHDRAWAL_APPROVE"},
-		ProjectFilter: &pf,
+		Methods:    []string{http.MethodGet, http.MethodPost},
+		EventNames: []string{"PAYMENT_CREATE", "WITHDRAWAL_APPROVE"},
 		PaginationConditions: activitylog.PaginationConditions{
 			Limit:     &limit,
 			Offset:    &offset,
@@ -442,7 +439,6 @@ redacted := activitylog.RedactDefaultJSONKeys(raw)
 File: `pkg/activitylog/errors.go`.
 
 - `ErrUnauthorized`
-- `ErrBadRequest`
 
 `ErrorToAPIStatus(err)` converts errors to `APIStatus`:
 

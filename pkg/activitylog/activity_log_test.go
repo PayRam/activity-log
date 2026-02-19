@@ -594,8 +594,7 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 		configProvider: &stubConfigProvider{val: 10, ok: true},
 	}
 
-	projectFilter := ProjectFilterAll
-	req := GetRequest{ProjectFilter: &projectFilter, Export: true}
+	req := GetRequest{Export: true}
 	if _, err := c.GetActivityLogs(context.Background(), 5, req); err != nil {
 		t.Fatalf("unexpected get error: %v", err)
 	}
@@ -611,18 +610,29 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 		t.Fatalf("expected unauthorized error, got %v", err)
 	}
 
-	unknownFilter := ProjectFilter("SOMETHING_ELSE")
-	req = GetRequest{ProjectFilter: &unknownFilter}
-	if _, err := c.GetActivityLogs(context.Background(), 5, req); !errors.Is(err, ErrUnauthorized) {
-		t.Fatalf("expected unauthorized error for unknown project filter, got %v", err)
-	}
-
 	req = GetRequest{StatusCodes: []HTTPStatusCode{http.StatusOK, http.StatusCreated}}
 	if _, err := c.GetActivityLogs(context.Background(), 0, req); err != nil {
 		t.Fatalf("unexpected get error for status code filters: %v", err)
 	}
 	if len(stub.lastFilter.StatusCodes) != 2 || stub.lastFilter.StatusCodes[0] != 200 || stub.lastFilter.StatusCodes[1] != 201 {
 		t.Fatalf("expected status code filter mapping to preserve values, got %+v", stub.lastFilter.StatusCodes)
+	}
+}
+
+func TestGetEmptyProjectIDsUnauthorizedForNonAdmin(t *testing.T) {
+	stub := &stubService{
+		getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+			return nil, 0, nil
+		},
+	}
+
+	c := &Client{
+		svc:            stub,
+		accessResolver: &stubAccessResolver{access: &AccessContext{IsAdmin: false, AllowedProjectIDs: []uint{1, 2}}},
+	}
+
+	if _, err := c.GetActivityLogs(context.Background(), 5, GetRequest{ProjectIDs: []uint{}}); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("expected unauthorized for empty project IDs, got %v", err)
 	}
 }
 
@@ -694,10 +704,8 @@ func TestGetWithUnifiedProvider(t *testing.T) {
 		},
 	}
 
-	filterAll := ProjectFilterAll
 	req := GetRequest{
-		ProjectFilter: &filterAll,
-		Export:        true,
+		Export: true,
 		PaginationConditions: PaginationConditions{
 			StartDate: &start,
 		},

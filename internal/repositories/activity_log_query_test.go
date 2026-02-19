@@ -59,7 +59,7 @@ func TestApplyActivityLogGetFilters_Basic(t *testing.T) {
 		"IN", "method", "member_id", "api_status", "event_name", "event_category",
 		"status_code", "session_id", "ip_address", "country", "role",
 		"SELECT id FROM members",
-		"external_platform_ids::jsonb @>",
+		"project_ids::jsonb @>",
 	}
 	for _, part := range expected {
 		if !strings.Contains(sql, part) {
@@ -68,23 +68,24 @@ func TestApplyActivityLogGetFilters_Basic(t *testing.T) {
 	}
 }
 
-func TestApplyActivityLogGetFilters_ProjectFilter(t *testing.T) {
+func TestApplyActivityLogGetFilters_ProjectIDsModes(t *testing.T) {
 	db := newDryRunDB(t)
-	projectFilter := ProjectFilterNoIDs
-	filter := ActivityLogFilters{ProjectFilter: &projectFilter}
+	filter := ActivityLogFilters{ProjectIDs: []uint{}}
 
 	query := ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
 	sql := buildSQL(t, query)
-	if !strings.Contains(sql, "external_platform_ids IS NULL") {
+	if !strings.Contains(sql, "project_ids IS NULL") {
 		t.Fatalf("expected SQL to contain NO_IDS condition, got: %s", sql)
 	}
 
-	projectFilter = ProjectFilterAll
-	filter = ActivityLogFilters{ProjectFilter: &projectFilter}
+	filter = ActivityLogFilters{ProjectIDs: []uint{7}}
 	query = ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
 	sql = buildSQL(t, query)
-	if !strings.Contains(sql, "external_platform_ids IS NOT NULL") {
-		t.Fatalf("expected SQL to contain ALL condition, got: %s", sql)
+	if !strings.Contains(sql, "project_ids::jsonb @>") {
+		t.Fatalf("expected SQL to contain project_ids containment condition, got: %s", sql)
+	}
+	if !strings.Contains(sql, "project_ids IS NULL") {
+		t.Fatalf("expected SQL to include no-project clause, got: %s", sql)
 	}
 }
 

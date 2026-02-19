@@ -22,8 +22,11 @@ type ActivityLogFilters struct {
 	IPAddresses     []string
 	Countries       []string
 	Roles           []string
-	ProjectIDs      []uint
-	ProjectFilter   *ProjectFilter // NO_IDS filters logs with no project IDs; ALL filters logs with any project IDs; nil ignores this filter.
+	// ProjectIDs filter semantics:
+	// nil => ignore project filtering.
+	// [] => logs with no project IDs.
+	// [id1, id2, ...] => logs containing provided IDs, plus rows with no project IDs.
+	ProjectIDs []uint
 
 	Limit         *int
 	Offset        *int
@@ -117,16 +120,16 @@ func ApplyActivityLogGetFilters(query *gorm.DB, filter ActivityLogFilters) *gorm
 		query = query.Where(fmt.Sprintf("%s.role IN ?", tableName), filter.Roles)
 	}
 
-	if filter.ProjectFilter != nil {
-		switch *filter.ProjectFilter {
-		case ProjectFilterNoIDs:
-			query = query.Where("(external_platform_ids IS NULL OR external_platform_ids::jsonb = '[]'::jsonb OR external_platform_ids::jsonb = 'null'::jsonb)")
-		case ProjectFilterAll:
-			query = query.Where("(external_platform_ids IS NOT NULL AND external_platform_ids::jsonb != '[]'::jsonb AND external_platform_ids::jsonb != 'null'::jsonb)")
-		}
-	} else if len(filter.ProjectIDs) > 0 {
-		for _, id := range filter.ProjectIDs {
-			query = query.Where("external_platform_ids::jsonb @> ?::jsonb", fmt.Sprintf("[%d]", id))
+	if filter.ProjectIDs != nil {
+		if len(filter.ProjectIDs) == 0 {
+			query = query.Where("(project_ids IS NULL OR project_ids::jsonb = '[]'::jsonb OR project_ids::jsonb = 'null'::jsonb)")
+		} else {
+			for _, id := range filter.ProjectIDs {
+				query = query.Where(
+					"(project_ids::jsonb @> ?::jsonb OR project_ids IS NULL OR project_ids::jsonb = '[]'::jsonb OR project_ids::jsonb = 'null'::jsonb)",
+					fmt.Sprintf("[%d]", id),
+				)
+			}
 		}
 	}
 
