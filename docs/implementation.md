@@ -147,10 +147,9 @@ What happens internally:
 
 `ProjectIDs` update semantics:
 
-- `nil pointer` => no change.
-- `&nilSlice` => set DB JSON column to `NULL`.
-- `&[]uint{}` => set DB JSON column to `[]`.
-- `&[]uint{1,2}` => set DB JSON column to `[1,2]`.
+- `nil slice` => no change.
+- `[]uint{}` => set DB JSON column to `[]`.
+- `[]uint{1,2}` => set DB JSON column to `[1,2]`.
 
 ### Sample: update API status and metadata
 
@@ -169,15 +168,12 @@ func updateExample(client *activitylog.Client) error {
 	code := activitylog.HTTPStatusCode(http.StatusForbidden)
 	msg := "permission denied"
 
-	// set project IDs to NULL in DB
-	var nilProjects []uint
-
 	_, err := client.UpdateActivityLogSessionID(context.Background(), activitylog.UpdateRequest{
 		SessionID:   "sess-123",
 		APIStatus:   &status,
 		StatusCode:  &code,
 		Description: &msg,
-		ProjectIDs:  &nilProjects,
+		ProjectIDs:  []uint{},
 	})
 	return err
 }

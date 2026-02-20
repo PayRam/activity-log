@@ -17,7 +17,7 @@ type fakeRepo struct {
 	catCalled    bool
 
 	lastCreate *models.ActivityLog
-	lastUpdate *repositories.UpdateActivityLogSessionModel
+	lastUpdate repositories.UpdateActivityLogSessionModel
 
 	createErr error
 	updateErr error
@@ -38,7 +38,7 @@ func (f *fakeRepo) CreateActivityLogs(ctx context.Context, activity *models.Acti
 	return &models.ActivityLog{SessionID: activity.SessionID}, nil
 }
 
-func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, update *repositories.UpdateActivityLogSessionModel) (*models.ActivityLog, error) {
+func (f *fakeRepo) UpdateActivityLogSessionID(ctx context.Context, update repositories.UpdateActivityLogSessionModel) (*models.ActivityLog, error) {
 	f.updateCalled = true
 	f.lastUpdate = update
 	if f.updateErr != nil {
@@ -97,7 +97,7 @@ func TestActivityLogServicePassThrough(t *testing.T) {
 	if !repo.updateCalled {
 		t.Fatalf("expected update to be called")
 	}
-	if repo.lastUpdate == nil || repo.lastUpdate.SessionID != "s1" {
+	if repo.lastUpdate.SessionID != "s1" {
 		t.Fatalf("expected update session to be mapped")
 	}
 	if repo.lastUpdate.Updates == nil {

@@ -4,7 +4,7 @@ package repositories
 type CreateActivityLogParams struct {
 	MemberID     *uint
 	SessionID    string
-	ProjectIDs   *[]uint
+	ProjectIDs   []uint
 	Method       string
 	APIPart      string
 	APIStatus    string
@@ -34,14 +34,13 @@ type CreateActivityLogParams struct {
 
 // UpdateActivityLogSessionParams contains updatable fields for a session-based update.
 // ProjectIDs semantics:
-// - nil pointer: do not update
-// - pointer to nil slice: set DB value to NULL
-// - pointer to empty/non-empty slice: set DB JSON array
+// - nil slice: do not update
+// - empty/non-empty slice: set DB JSON array
 // Other pointer fields follow standard semantics: nil means no update.
 type UpdateActivityLogSessionParams struct {
 	SessionID string
 
-	ProjectIDs   *[]uint
+	ProjectIDs   []uint
 	MemberID     *uint
 	Method       *string
 	APIPart      *string

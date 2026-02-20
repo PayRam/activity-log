@@ -77,7 +77,7 @@ type CreateRequest struct {
 // UpdateRequest defines the fields for updating an activity record by session ID.
 type UpdateRequest struct {
 	SessionID    string
-	ProjectIDs   *[]uint
+	ProjectIDs   []uint
 	MemberID     *uint
 	Method       *string
 	Endpoint     *string

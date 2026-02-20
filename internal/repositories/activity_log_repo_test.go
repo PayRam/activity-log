@@ -94,7 +94,7 @@ func TestActivityLogRepositoryUpdateMissingRecord(t *testing.T) {
 	db := newPostgresDB(t)
 	repo := NewActivityLogRepository(db, zap.NewNop())
 
-	update := &UpdateActivityLogSessionModel{SessionID: "missing-session"}
+	update := UpdateActivityLogSessionModel{SessionID: "missing-session"}
 	if _, err := repo.UpdateActivityLogSessionID(context.Background(), update); err == nil {
 		t.Fatalf("expected error for missing session_id record")
 	}
@@ -108,7 +108,7 @@ func TestActivityLogRepositoryUpdateDryRun(t *testing.T) {
 	action := "READ"
 	method := "GET"
 	apiPart := "/ping"
-	update := &UpdateActivityLogSessionModel{
+	update := UpdateActivityLogSessionModel{
 		SessionID: "sess-1",
 		Updates: map[string]interface{}{
 			"api_status": status,
@@ -143,7 +143,7 @@ func TestActivityLogRepositoryUpdateProjectIDsNullable(t *testing.T) {
 	}
 
 	var nilProjects models.UintSlice
-	updated, err := repo.UpdateActivityLogSessionID(context.Background(), &UpdateActivityLogSessionModel{
+	updated, err := repo.UpdateActivityLogSessionID(context.Background(), UpdateActivityLogSessionModel{
 		SessionID: "sess-nullable",
 		Updates: map[string]interface{}{
 			"project_ids": nilProjects,

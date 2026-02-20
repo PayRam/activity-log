@@ -58,7 +58,7 @@ func (s *stubService) CreateActivityLogs(ctx context.Context, params repositorie
 		Longitude:     params.Longitude,
 	}
 	if params.ProjectIDs != nil {
-		model.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+		model.ProjectIDs = models.UintSlice(params.ProjectIDs)
 	}
 	return model, nil
 }
@@ -70,7 +70,7 @@ func (s *stubService) UpdateActivityLogSessionID(ctx context.Context, params rep
 	}
 	model := &models.ActivityLog{SessionID: params.SessionID}
 	if params.ProjectIDs != nil {
-		model.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+		model.ProjectIDs = models.UintSlice(params.ProjectIDs)
 	}
 	if params.MemberID != nil {
 		model.MemberID = params.MemberID
@@ -531,7 +531,7 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 	apiAction := "WRITE"
 	req := UpdateRequest{
 		SessionID:  "sess",
-		ProjectIDs: uintSlicePtrTest([]uint{9}),
+		ProjectIDs: []uint{9},
 		Method:     &method,
 		Endpoint:   &endpoint,
 		APIStatus:  &apiStatus,
@@ -756,10 +756,6 @@ func TestGetEventCategories(t *testing.T) {
 }
 
 func uintPtr(v uint) *uint {
-	return &v
-}
-
-func uintSlicePtrTest(v []uint) *[]uint {
 	return &v
 }
 

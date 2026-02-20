@@ -282,7 +282,7 @@ Required field:
 
 Supported updatable fields:
 
-- actor scope: `MemberID *uint`, `ProjectIDs *[]uint`
+- actor scope: `MemberID *uint`, `ProjectIDs []uint`
 - route/action/status: `Method *string`, `Endpoint *string`, `APIAction *string`, `APIStatus *APIStatus`
 - result: `StatusCode *HTTPStatusCode`, `Description *string`, `APIErrorMsg *string`
 - request info: `IPAddress *string`, `UserAgent *string`, `Referer *string`
@@ -316,7 +316,7 @@ Actor and classification:
 | Field | Type | Create | Update | Notes |
 | --- | --- | --- | --- | --- |
 | `MemberID` | `*uint` | `O` | `O` | Actor member id |
-| `ProjectIDs` | `[]uint` / `*[]uint` | `O` | `O` | Create uses `[]uint`; Update uses `*[]uint` for nullable semantics |
+| `ProjectIDs` | `[]uint` | `O` | `O` | `nil` slice means no update; empty/non-empty slice updates DB JSON array |
 | `Role` | `*string` | `O` | `O` | Actor role |
 | `EventCategory` | `*string` | `O` | `O` | Event grouping |
 | `EventName` | `*string` | `O` | `O` | Event name |
@@ -349,9 +349,8 @@ Pointer semantics for update:
 - `nil` pointer field: no change
 - non-`nil` pointer field: update to provided value
 - update `ProjectIDs == nil`: no change
-- update `ProjectIDs != nil` and `*ProjectIDs == nil`: set DB value to `NULL`
-- update `ProjectIDs != nil` and `len(*ProjectIDs) == 0`: set empty JSON array (`[]`)
-- update `ProjectIDs != nil` and populated: set provided IDs
+- update `len(ProjectIDs) == 0` with non-nil slice value (`[]uint{}`): set empty JSON array (`[]`)
+- update `ProjectIDs` populated: set provided IDs
 
 Implementation detail:
 

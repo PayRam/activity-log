@@ -33,7 +33,7 @@ func (r *ActivityLogRepositoryImpl) CreateActivityLogs(ctx context.Context, acti
 }
 
 // UpdateActivityLogSessionID updates an activity record by session ID with row locking.
-func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Context, update *UpdateActivityLogSessionModel) (*models.ActivityLog, error) {
+func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Context, update UpdateActivityLogSessionModel) (*models.ActivityLog, error) {
 	var updated models.ActivityLog
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

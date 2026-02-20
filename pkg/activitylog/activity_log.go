@@ -117,7 +117,7 @@ func (c *Client) CreateActivityLogs(ctx context.Context, req CreateRequest) (*Ac
 	params := repositories.CreateActivityLogParams{
 		MemberID:      req.MemberID,
 		SessionID:     req.SessionID,
-		ProjectIDs:    uintSlicePtr(req.ProjectIDs),
+		ProjectIDs:    cloneUintSlice(req.ProjectIDs),
 		Method:        req.Method,
 		APIPart:       req.Endpoint,
 		APIStatus:     string(req.APIStatus),
@@ -163,7 +163,7 @@ func (c *Client) UpdateActivityLogSessionID(ctx context.Context, req UpdateReque
 
 	params := repositories.UpdateActivityLogSessionParams{
 		SessionID:     req.SessionID,
-		ProjectIDs:    cloneUintSlicePtr(req.ProjectIDs),
+		ProjectIDs:    cloneUintSlice(req.ProjectIDs),
 		MemberID:      req.MemberID,
 		Method:        req.Method,
 		APIPart:       req.Endpoint,
@@ -520,26 +520,13 @@ func statusCodesToInts(codes []HTTPStatusCode) []int {
 	return values
 }
 
-func uintSlicePtr(values []uint) *[]uint {
+func cloneUintSlice(values []uint) []uint {
 	if values == nil {
 		return nil
 	}
 	out := make([]uint, len(values))
 	copy(out, values)
-	return &out
-}
-
-func cloneUintSlicePtr(values *[]uint) *[]uint {
-	if values == nil {
-		return nil
-	}
-	if *values == nil {
-		var nilSlice []uint
-		return &nilSlice
-	}
-	out := make([]uint, len(*values))
-	copy(out, *values)
-	return &out
+	return out
 }
 
 func apiStatusesToStrings(statuses []APIStatus) []string {

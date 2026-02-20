@@ -79,7 +79,7 @@ func trackerCreateModelFromParams(params repositories.CreateActivityLogParams) *
 		Longitude:     params.Longitude,
 	}
 	if params.ProjectIDs != nil {
-		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+		activity.ProjectIDs = models.UintSlice(params.ProjectIDs)
 	}
 	return activity
 }
@@ -87,7 +87,7 @@ func trackerCreateModelFromParams(params repositories.CreateActivityLogParams) *
 func trackerUpdateModelFromParams(params repositories.UpdateActivityLogSessionParams) *models.ActivityLog {
 	activity := &models.ActivityLog{SessionID: params.SessionID}
 	if params.ProjectIDs != nil {
-		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+		activity.ProjectIDs = models.UintSlice(params.ProjectIDs)
 	}
 	if params.MemberID != nil {
 		activity.MemberID = params.MemberID

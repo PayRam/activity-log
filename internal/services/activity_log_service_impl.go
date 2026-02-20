@@ -54,7 +54,7 @@ func (s *ActivityLogServiceImpl) CreateActivityLogs(ctx context.Context, params 
 		Longitude:     params.Longitude,
 	}
 	if params.ProjectIDs != nil {
-		activity.ProjectIDs = models.UintSlice(*params.ProjectIDs)
+		activity.ProjectIDs = models.UintSlice(params.ProjectIDs)
 	}
 
 	return s.repo.CreateActivityLogs(ctx, activity)
@@ -71,7 +71,7 @@ func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context,
 
 	updates := map[string]interface{}{}
 	if params.ProjectIDs != nil {
-		updates["project_ids"] = models.UintSlice(*params.ProjectIDs)
+		updates["project_ids"] = models.UintSlice(params.ProjectIDs)
 	}
 	if params.MemberID != nil {
 		updates["member_id"] = *params.MemberID
@@ -150,7 +150,7 @@ func (s *ActivityLogServiceImpl) UpdateActivityLogSessionID(ctx context.Context,
 		updates = nil
 	}
 
-	return s.repo.UpdateActivityLogSessionID(ctx, &repositories.UpdateActivityLogSessionModel{
+	return s.repo.UpdateActivityLogSessionID(ctx, repositories.UpdateActivityLogSessionModel{
 		SessionID: params.SessionID,
 		Updates:   updates,
 	})
