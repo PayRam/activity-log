@@ -46,10 +46,10 @@ func (r *ActivityLogRepositoryImpl) UpdateActivityLogSessionID(ctx context.Conte
 			return fmt.Errorf("failed to lock activity with session_id %s: %w", update.SessionID, err)
 		}
 
-		if update.Fields != nil {
+		if len(update.Updates) > 0 {
 			if err := tx.Model(&models.ActivityLog{}).
 				Where("session_id = ?", update.SessionID).
-				Updates(update.Fields).Error; err != nil {
+				Updates(update.Updates).Error; err != nil {
 				if r.logger != nil {
 					r.logger.Error("Failed to update activity log", zap.String("session_id", update.SessionID), zap.Error(err))
 				}

@@ -110,11 +110,11 @@ func TestActivityLogRepositoryUpdateDryRun(t *testing.T) {
 	apiPart := "/ping"
 	update := &UpdateActivityLogSessionModel{
 		SessionID: "sess-1",
-		Fields: &ActivityLogUpdateFields{
-			APIStatus: &status,
-			APIAction: &action,
-			Method:    &method,
-			APIPart:   &apiPart,
+		Updates: map[string]interface{}{
+			"api_status": status,
+			"api_action": action,
+			"method":     method,
+			"api_part":   apiPart,
 		},
 	}
 	if _, err := repo.UpdateActivityLogSessionID(context.Background(), update); err != nil {
@@ -145,8 +145,8 @@ func TestActivityLogRepositoryUpdateProjectIDsNullable(t *testing.T) {
 	var nilProjects models.UintSlice
 	updated, err := repo.UpdateActivityLogSessionID(context.Background(), &UpdateActivityLogSessionModel{
 		SessionID: "sess-nullable",
-		Fields: &ActivityLogUpdateFields{
-			ProjectIDs: &nilProjects,
+		Updates: map[string]interface{}{
+			"project_ids": nilProjects,
 		},
 	})
 	if err != nil {

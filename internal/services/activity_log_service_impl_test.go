@@ -100,7 +100,10 @@ func TestActivityLogServicePassThrough(t *testing.T) {
 	if repo.lastUpdate == nil || repo.lastUpdate.SessionID != "s1" {
 		t.Fatalf("expected update session to be mapped")
 	}
-	if repo.lastUpdate.Fields == nil || repo.lastUpdate.Fields.Method == nil || *repo.lastUpdate.Fields.Method != "PATCH" {
+	if repo.lastUpdate.Updates == nil {
+		t.Fatalf("expected update map to be populated")
+	}
+	if methodVal, ok := repo.lastUpdate.Updates["method"].(string); !ok || methodVal != "PATCH" {
 		t.Fatalf("expected service to map update params into update model")
 	}
 
