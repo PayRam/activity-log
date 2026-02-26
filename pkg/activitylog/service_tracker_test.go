@@ -153,7 +153,7 @@ func TestServiceTrackerTrackSuccess(t *testing.T) {
 	if created.APIPart != op.Name {
 		t.Fatalf("expected endpoint %q, got %q", op.Name, created.APIPart)
 	}
-	if created.APIAction != APIActionWrite {
+	if created.APIAction != string(APIActionWrite) {
 		t.Fatalf("expected API action %q, got %q", APIActionWrite, created.APIAction)
 	}
 

@@ -528,7 +528,7 @@ func TestUpdateValidationAndMapping(t *testing.T) {
 	method := "PUT"
 	endpoint := "/update"
 	apiStatus := APIStatusSuccess
-	apiAction := "WRITE"
+	apiAction := APIActionWrite
 	req := UpdateRequest{
 		SessionID:  "sess",
 		ProjectIDs: []uint{9},
@@ -616,6 +616,38 @@ func TestGetAccessScopeAndExportLimit(t *testing.T) {
 	}
 	if len(stub.lastFilter.StatusCodes) != 2 || stub.lastFilter.StatusCodes[0] != 200 || stub.lastFilter.StatusCodes[1] != 201 {
 		t.Fatalf("expected status code filter mapping to preserve values, got %+v", stub.lastFilter.StatusCodes)
+	}
+}
+
+func TestGetExcludeActionStatusPairsMapping(t *testing.T) {
+	stub := &stubService{getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+		return nil, 0, nil
+	}}
+	c := &Client{svc: stub}
+	req := GetRequest{ExcludeActionStatusPairs: []string{"read:success", "WRITE:ERROR"}}
+	if _, err := c.GetActivityLogs(context.Background(), 0, req); err != nil {
+		t.Fatalf("unexpected get error: %v", err)
+	}
+	if len(stub.lastFilter.ExcludeActionStatusPairs) != 2 {
+		t.Fatalf("expected 2 pair filters, got %+v", stub.lastFilter.ExcludeActionStatusPairs)
+	}
+	if stub.lastFilter.ExcludeActionStatusPairs[0].APIAction != "READ" || stub.lastFilter.ExcludeActionStatusPairs[0].APIStatus != "SUCCESS" {
+		t.Fatalf("expected normalized READ:SUCCESS, got %+v", stub.lastFilter.ExcludeActionStatusPairs[0])
+	}
+}
+
+func TestGetExcludeActionStatusPairsValidation(t *testing.T) {
+	stub := &stubService{getFn: func(filter repositories.ActivityLogFilters) ([]models.ActivityLog, int64, error) {
+		return nil, 0, nil
+	}}
+	c := &Client{svc: stub}
+	_, err := c.GetActivityLogs(context.Background(), 0, GetRequest{ExcludeActionStatusPairs: []string{"READ-SUCCESS"}})
+	if err == nil {
+		t.Fatalf("expected error for malformed excludeActionStatusPairs value")
+	}
+	_, err = c.GetActivityLogs(context.Background(), 0, GetRequest{ExcludeActionStatusPairs: []string{"NOPE:SUCCESS"}})
+	if err == nil {
+		t.Fatalf("expected error for invalid action in excludeActionStatusPairs")
 	}
 }
 
