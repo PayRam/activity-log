@@ -106,7 +106,7 @@ func Middleware(configs ...Config) func(http.Handler) http.Handler {
 				SessionID:   sessionID,
 				Method:      r.Method,
 				Endpoint:    r.URL.Path,
-				APIAction:   middleware.MethodToAction(r.Method),
+				APIAction:   activitylog.APIAction(middleware.MethodToAction(r.Method)),
 				APIStatus:   activitylog.APIStatusSuccess,
 				RequestBody: requestBody,
 			}

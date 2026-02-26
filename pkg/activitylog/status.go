@@ -5,6 +5,9 @@ import "errors"
 // APIStatus is the enum for API execution outcomes.
 type APIStatus string
 
+// APIAction is the enum for API operation categories.
+type APIAction string
+
 const (
 	APIStatusSuccess APIStatus = "SUCCESS"
 	APIStatusDenied  APIStatus = "DENIED"
@@ -12,10 +15,10 @@ const (
 )
 
 const (
-	APIActionRead    = "READ"
-	APIActionWrite   = "WRITE"
-	APIActionDelete  = "DELETE"
-	APIActionUnknown = "UNKNOWN"
+	APIActionRead    APIAction = "READ"
+	APIActionWrite   APIAction = "WRITE"
+	APIActionDelete  APIAction = "DELETE"
+	APIActionUnknown APIAction = "UNKNOWN"
 
 	DefaultServiceMethod   = "SERVICE"
 	DefaultServiceEndpoint = "service"
@@ -30,6 +33,21 @@ func (s APIStatus) String() string {
 func (s APIStatus) IsValid() bool {
 	switch s {
 	case APIStatusSuccess, APIStatusDenied, APIStatusError:
+		return true
+	default:
+		return false
+	}
+}
+
+// String returns the string form of the action.
+func (a APIAction) String() string {
+	return string(a)
+}
+
+// IsValid returns true when the action value is one of the supported enums.
+func (a APIAction) IsValid() bool {
+	switch a {
+	case APIActionRead, APIActionWrite, APIActionDelete, APIActionUnknown:
 		return true
 	default:
 		return false

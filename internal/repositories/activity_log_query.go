@@ -8,20 +8,28 @@ import (
 	"gorm.io/gorm"
 )
 
+type ActionStatusPairFilter struct {
+	APIAction string
+	APIStatus string
+}
+
 // ActivityLogFilters defines filter options for listing activities.
 type ActivityLogFilters struct {
-	SessionIDs      []string
-	Search          *string
-	StatusCodes     []int
-	IDS             []uint
-	MemberIDs       []uint
-	Methods         []string
-	APIStatuses     []string
-	EventCategories []string
-	EventNames      []string
-	IPAddresses     []string
-	Countries       []string
-	Roles           []string
+	SessionIDs               []string
+	Search                   *string
+	StatusCodes              []int
+	IDS                      []uint
+	MemberIDs                []uint
+	Methods                  []string
+	ExcludeMethods           []string
+	APIStatuses              []string
+	ExcludeAPIStatuses       []string
+	ExcludeActionStatusPairs []ActionStatusPairFilter
+	EventCategories          []string
+	EventNames               []string
+	IPAddresses              []string
+	Countries                []string
+	Roles                    []string
 	// ProjectIDs filter semantics:
 	// nil => ignore project filtering.
 	// [] => logs with no project IDs.
@@ -67,11 +75,27 @@ func ApplyActivityLogGetFilters(query *gorm.DB, filter ActivityLogFilters) *gorm
 	if len(filter.Methods) > 0 {
 		query = query.Where(fmt.Sprintf("%s.method IN ?", tableName), filter.Methods)
 	}
+	if len(filter.ExcludeMethods) > 0 {
+		query = query.Where(fmt.Sprintf("%s.method NOT IN ?", tableName), filter.ExcludeMethods)
+	}
 	if len(filter.MemberIDs) > 0 {
 		query = query.Where(fmt.Sprintf("%s.member_id IN ?", tableName), filter.MemberIDs)
 	}
 	if len(filter.APIStatuses) > 0 {
 		query = query.Where(fmt.Sprintf("%s.api_status IN ?", tableName), filter.APIStatuses)
+	}
+	if len(filter.ExcludeAPIStatuses) > 0 {
+		query = query.Where(fmt.Sprintf("%s.api_status NOT IN ?", tableName), filter.ExcludeAPIStatuses)
+	}
+	for _, pair := range filter.ExcludeActionStatusPairs {
+		if pair.APIAction == "" || pair.APIStatus == "" {
+			continue
+		}
+		query = query.Where(
+			fmt.Sprintf("NOT (%s.api_action = ? AND %s.api_status = ?)", tableName, tableName),
+			pair.APIAction,
+			pair.APIStatus,
+		)
 	}
 	if len(filter.EventNames) > 0 {
 		query = query.Where(fmt.Sprintf("%s.event_name IN ?", tableName), filter.EventNames)

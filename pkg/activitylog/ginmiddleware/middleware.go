@@ -103,7 +103,7 @@ func Middleware(configs ...Config) gin.HandlerFunc {
 			SessionID:   sessionID,
 			Method:      c.Request.Method,
 			Endpoint:    c.Request.URL.Path,
-			APIAction:   middleware.MethodToAction(c.Request.Method),
+			APIAction:   activitylog.APIAction(middleware.MethodToAction(c.Request.Method)),
 			APIStatus:   activitylog.APIStatusSuccess,
 			RequestBody: requestBody,
 		}

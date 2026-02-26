@@ -3,6 +3,7 @@ package activitylog
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/PayRam/activity-log/internal/models"
@@ -108,6 +109,9 @@ func (c *Client) CreateActivityLogs(ctx context.Context, req CreateRequest) (*Ac
 	if req.APIAction == "" {
 		return nil, fmt.Errorf("api_action is required")
 	}
+	if !req.APIAction.IsValid() {
+		return nil, fmt.Errorf("api_action is invalid")
+	}
 	if req.APIStatus == "" {
 		return nil, fmt.Errorf("api_status is required")
 	}
@@ -126,7 +130,7 @@ func (c *Client) CreateActivityLogs(ctx context.Context, req CreateRequest) (*Ac
 		IPAddress:     req.IPAddress,
 		UserAgent:     req.UserAgent,
 		Referer:       req.Referer,
-		APIAction:     req.APIAction,
+		APIAction:     req.APIAction.String(),
 		APIErrorMsg:   req.APIErrorMsg,
 		RequestBody:   req.RequestBody,
 		ResponseBody:  req.ResponseBody,
@@ -158,6 +162,9 @@ func (c *Client) UpdateActivityLogSessionID(ctx context.Context, req UpdateReque
 	if req.SessionID == "" {
 		return nil, fmt.Errorf("session_id is required")
 	}
+	if req.APIAction != nil && *req.APIAction != "" && !req.APIAction.IsValid() {
+		return nil, fmt.Errorf("api_action is invalid")
+	}
 
 	applyUpdateEventFallback(&req, c.eventDeriver, c.eventInfoDeriver)
 
@@ -167,7 +174,7 @@ func (c *Client) UpdateActivityLogSessionID(ctx context.Context, req UpdateReque
 		MemberID:      req.MemberID,
 		Method:        req.Method,
 		APIPart:       req.Endpoint,
-		APIAction:     req.APIAction,
+		APIAction:     apiActionPtrToString(req.APIAction),
 		StatusCode:    statusCodePtrToInt(req.StatusCode),
 		Description:   req.Description,
 		IPAddress:     req.IPAddress,
@@ -216,32 +223,40 @@ func (c *Client) GetActivityLogs(ctx context.Context, memberID uint, req GetRequ
 		}
 	}
 
+	excludeActionStatusPairs, err := parseExcludeActionStatusPairs(req.ExcludeActionStatusPairs)
+	if err != nil {
+		return GetResponse{}, err
+	}
+
 	filter := repositories.ActivityLogFilters{
-		IDS:             req.IDS,
-		APIStatuses:     apiStatusesToStrings(req.APIStatuses),
-		Methods:         req.Methods,
-		EventNames:      req.EventNames,
-		EventCategories: req.EventCategories,
-		Search:          req.Search,
-		StatusCodes:     statusCodesToInts(req.StatusCodes),
-		IPAddresses:     req.IPAddresses,
-		Countries:       req.Countries,
-		Roles:           req.Roles,
-		MemberIDs:       req.MemberIDs,
-		SessionIDs:      req.SessionIDs,
-		ProjectIDs:      req.ProjectIDs,
-		Limit:           req.PaginationConditions.Limit,
-		Offset:          req.PaginationConditions.Offset,
-		StartDate:       req.PaginationConditions.StartDate,
-		EndDate:         req.PaginationConditions.EndDate,
-		SortBy:          req.PaginationConditions.SortBy,
-		Order:           req.PaginationConditions.Order,
-		GreaterThanID:   req.PaginationConditions.GreaterThanID,
-		LessThanID:      req.PaginationConditions.LessThanID,
-		CreatedAfter:    req.PaginationConditions.CreatedAfter,
-		CreatedBefore:   req.PaginationConditions.CreatedBefore,
-		UpdatedAfter:    req.PaginationConditions.UpdatedAfter,
-		UpdatedBefore:   req.PaginationConditions.UpdatedBefore,
+		IDS:                      req.IDS,
+		APIStatuses:              apiStatusesToStrings(req.APIStatuses),
+		ExcludeAPIStatuses:       apiStatusesToStrings(req.ExcludeAPIStatuses),
+		ExcludeActionStatusPairs: excludeActionStatusPairs,
+		Methods:                  req.Methods,
+		ExcludeMethods:           req.ExcludeMethods,
+		EventNames:               req.EventNames,
+		EventCategories:          req.EventCategories,
+		Search:                   req.Search,
+		StatusCodes:              statusCodesToInts(req.StatusCodes),
+		IPAddresses:              req.IPAddresses,
+		Countries:                req.Countries,
+		Roles:                    req.Roles,
+		MemberIDs:                req.MemberIDs,
+		SessionIDs:               req.SessionIDs,
+		ProjectIDs:               req.ProjectIDs,
+		Limit:                    req.PaginationConditions.Limit,
+		Offset:                   req.PaginationConditions.Offset,
+		StartDate:                req.PaginationConditions.StartDate,
+		EndDate:                  req.PaginationConditions.EndDate,
+		SortBy:                   req.PaginationConditions.SortBy,
+		Order:                    req.PaginationConditions.Order,
+		GreaterThanID:            req.PaginationConditions.GreaterThanID,
+		LessThanID:               req.PaginationConditions.LessThanID,
+		CreatedAfter:             req.PaginationConditions.CreatedAfter,
+		CreatedBefore:            req.PaginationConditions.CreatedBefore,
+		UpdatedAfter:             req.PaginationConditions.UpdatedAfter,
+		UpdatedBefore:            req.PaginationConditions.UpdatedBefore,
 	}
 
 	limit := DefaultGetLimit
@@ -386,7 +401,7 @@ func toActivity(model *models.ActivityLog) *Activity {
 		IPAddress:     model.IPAddress,
 		UserAgent:     model.UserAgent,
 		Referer:       model.Referer,
-		APIAction:     model.APIAction,
+		APIAction:     APIAction(model.APIAction),
 		APIErrorMsg:   model.APIErrorMsg,
 		RequestBody:   model.RequestBody,
 		ResponseBody:  model.ResponseBody,
@@ -544,6 +559,47 @@ func apiStatusesToStrings(statuses []APIStatus) []string {
 		return nil
 	}
 	return values
+}
+
+func apiActionPtrToString(action *APIAction) *string {
+	if action == nil {
+		return nil
+	}
+	s := action.String()
+	return &s
+}
+
+func parseExcludeActionStatusPairs(values []string) ([]repositories.ActionStatusPairFilter, error) {
+	if len(values) == 0 {
+		return nil, nil
+	}
+	pairs := make([]repositories.ActionStatusPairFilter, 0, len(values))
+	for _, raw := range values {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		parts := strings.SplitN(raw, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid excludeActionStatusPairs value %q: expected ACTION:STATUS", raw)
+		}
+		action := APIAction(strings.ToUpper(strings.TrimSpace(parts[0])))
+		status := APIStatus(strings.ToUpper(strings.TrimSpace(parts[1])))
+		if action == "" || status == "" {
+			return nil, fmt.Errorf("invalid excludeActionStatusPairs value %q: expected ACTION:STATUS", raw)
+		}
+		if !action.IsValid() {
+			return nil, fmt.Errorf("invalid excludeActionStatusPairs value %q: unsupported action %q", raw, action)
+		}
+		if !status.IsValid() {
+			return nil, fmt.Errorf("invalid excludeActionStatusPairs value %q: unsupported status %q", raw, status)
+		}
+		pairs = append(pairs, repositories.ActionStatusPairFilter{APIAction: action.String(), APIStatus: string(status)})
+	}
+	if len(pairs) == 0 {
+		return nil, nil
+	}
+	return pairs, nil
 }
 
 func (c *Client) resolveAccess(ctx context.Context, memberID uint) (*AccessContext, error) {
