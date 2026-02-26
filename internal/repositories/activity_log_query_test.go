@@ -68,6 +68,38 @@ func TestApplyActivityLogGetFilters_Basic(t *testing.T) {
 	}
 }
 
+func TestApplyActivityLogGetFilters_ExcludeMethodsAndAPIStatuses(t *testing.T) {
+	db := newDryRunDB(t)
+	filter := ActivityLogFilters{
+		ExcludeMethods:     []string{"READ"},
+		ExcludeAPIStatuses: []string{"SUCCESS"},
+	}
+
+	query := ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
+	sql := buildSQL(t, query)
+
+	if !strings.Contains(sql, "method NOT IN") {
+		t.Fatalf("expected SQL to contain method NOT IN, got: %s", sql)
+	}
+	if !strings.Contains(sql, "api_status NOT IN") {
+		t.Fatalf("expected SQL to contain api_status NOT IN, got: %s", sql)
+	}
+}
+
+func TestApplyActivityLogGetFilters_ExcludeActionStatusPairs(t *testing.T) {
+	db := newDryRunDB(t)
+	filter := ActivityLogFilters{
+		ExcludeActionStatusPairs: []ActionStatusPairFilter{{APIAction: "READ", APIStatus: "SUCCESS"}},
+	}
+
+	query := ApplyActivityLogGetFilters(db.Model(&models.ActivityLog{}), filter)
+	sql := buildSQL(t, query)
+
+	if !strings.Contains(sql, "NOT (") || !strings.Contains(sql, "api_action") || !strings.Contains(sql, "api_status") {
+		t.Fatalf("expected SQL to contain grouped api_action/api_status exclusion, got: %s", sql)
+	}
+}
+
 func TestApplyActivityLogGetFilters_ProjectIDsModes(t *testing.T) {
 	db := newDryRunDB(t)
 	filter := ActivityLogFilters{ProjectIDs: []uint{}}

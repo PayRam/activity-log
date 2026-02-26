@@ -34,11 +34,11 @@ func SessionIDFromContext(ctx context.Context) (string, bool) {
 
 // OperationTrailEntry is a single service-level operation in the metadata trail.
 type OperationTrailEntry struct {
-	Name      string `json:"name"`
-	APIAction string `json:"apiAction,omitempty"`
-	Method    string `json:"method,omitempty"`
-	Endpoint  string `json:"endpoint,omitempty"`
-	Status    string `json:"status,omitempty"`
+	Name      string    `json:"name"`
+	APIAction APIAction `json:"apiAction,omitempty"`
+	Method    string    `json:"method,omitempty"`
+	Endpoint  string    `json:"endpoint,omitempty"`
+	Status    string    `json:"status,omitempty"`
 }
 
 func withOperationTrail(ctx context.Context, trail []OperationTrailEntry) context.Context {

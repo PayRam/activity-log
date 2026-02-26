@@ -17,7 +17,7 @@ type ServiceOperation struct {
 	ProjectIDs    []uint
 	Method        string
 	Endpoint      string
-	APIAction     string
+	APIAction     APIAction
 	Description   *string
 	Metadata      *string
 	Role          *string

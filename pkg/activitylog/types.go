@@ -20,7 +20,7 @@ type Activity struct {
 	IPAddress    *string
 	UserAgent    *string
 	Referer      *string
-	APIAction    string
+	APIAction    APIAction
 	APIErrorMsg  *string
 	RequestBody  *string
 	ResponseBody *string
@@ -49,7 +49,7 @@ type CreateRequest struct {
 	ProjectIDs   []uint
 	Method       string
 	Endpoint     string
-	APIAction    string
+	APIAction    APIAction
 	APIStatus    APIStatus
 	StatusCode   *HTTPStatusCode
 	Description  *string
@@ -81,7 +81,7 @@ type UpdateRequest struct {
 	MemberID     *uint
 	Method       *string
 	Endpoint     *string
-	APIAction    *string
+	APIAction    *APIAction
 	APIStatus    *APIStatus
 	StatusCode   *HTTPStatusCode
 	Description  *string
@@ -139,19 +139,22 @@ type PaginationConditions struct {
 
 // GetRequest defines filters for getting activity logs.
 type GetRequest struct {
-	StatusCodes     []HTTPStatusCode `form:"statusCode"`
-	Search          *string          `form:"search"`
-	SessionIDs      []string         `form:"sessionIDs"`
-	EventCategories []string         `form:"eventCategories"`
-	Methods         []string         `form:"methods"`
-	EventNames      []string         `form:"eventNames"`
-	IDS             []uint           `form:"ids"`
-	MemberIDs       []uint           `form:"memberIDs"`
-	ProjectIDs      []uint           `form:"projectIDs"`
-	APIStatuses     []APIStatus      `form:"apiStatuses"`
-	IPAddresses     []string         `form:"ipAddresses"`
-	Countries       []string         `form:"countries"`
-	Roles           []string         `form:"roles"`
+	StatusCodes              []HTTPStatusCode `form:"statusCode"`
+	Search                   *string          `form:"search"`
+	SessionIDs               []string         `form:"sessionIDs"`
+	EventCategories          []string         `form:"eventCategories"`
+	Methods                  []string         `form:"methods"`
+	ExcludeMethods           []string         `form:"excludeMethods"`
+	EventNames               []string         `form:"eventNames"`
+	IDS                      []uint           `form:"ids"`
+	MemberIDs                []uint           `form:"memberIDs"`
+	ProjectIDs               []uint           `form:"projectIDs"`
+	APIStatuses              []APIStatus      `form:"apiStatuses"`
+	ExcludeAPIStatuses       []APIStatus      `form:"excludeAPIStatuses"`
+	ExcludeActionStatusPairs []string         `form:"excludeActionStatusPairs"`
+	IPAddresses              []string         `form:"ipAddresses"`
+	Countries                []string         `form:"countries"`
+	Roles                    []string         `form:"roles"`
 
 	Export bool `form:"-"`
 
