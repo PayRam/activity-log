@@ -4,12 +4,56 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 	"sort"
 	"strings"
 	"unicode"
 )
 
 const defaultEventDeriverBasePath = "/api/v1"
+
+var ignoredEventCategoryTokens = map[string]struct{}{
+	"api":          {},
+	"doc":          {},
+	"docs":         {},
+	"etc":          {},
+	"favicon_ico":  {},
+	"graphql":      {},
+	"health":       {},
+	"healthcheck":  {},
+	"metric":       {},
+	"metrics":      {},
+	"robots_txt":   {},
+	"security_txt": {},
+	"sitemap_xml":  {},
+	"status":       {},
+	"swagger":      {},
+	"well_known":   {},
+	"_next":        {},
+}
+
+var staticAssetExtensions = map[string]struct{}{
+	".css":   {},
+	".eot":   {},
+	".gif":   {},
+	".htm":   {},
+	".html":  {},
+	".ico":   {},
+	".jpeg":  {},
+	".jpg":   {},
+	".js":    {},
+	".json":  {},
+	".map":   {},
+	".php":   {},
+	".png":   {},
+	".svg":   {},
+	".txt":   {},
+	".webp":  {},
+	".woff":  {},
+	".woff2": {},
+	".xml":   {},
+	".env":   {},
+}
 
 // EventDeriverInput contains data used to derive event values.
 type EventDeriverInput struct {
@@ -38,8 +82,9 @@ type EventInfoDeriver func(input EventDeriverInput) EventInfo
 // CoreLikeEventDeriverConfig configures NewCoreLikeEventDeriver.
 // This is useful when you want behavior similar to test/core deriveEventInfo.
 type CoreLikeEventDeriverConfig struct {
-	BasePath   string
-	TableNames []string
+	BasePath         string
+	TableNames       []string
+	StrictTableMatch bool
 }
 
 // DefaultEventDeriver derives both values from the endpoint segment after /api/v1/.
@@ -84,17 +129,10 @@ func NewCoreLikeEventInfoDeriver(cfg CoreLikeEventDeriverConfig) EventInfoDerive
 	}
 	baseParts := normalizedPathSegments(basePath)
 	tables := append([]string(nil), cfg.TableNames...)
+	strictTableMatch := cfg.StrictTableMatch
 
 	return func(input EventDeriverInput) EventInfo {
-		segments := normalizedPathSegments(input.Endpoint)
-		if len(segments) == 0 {
-			return EventInfo{}
-		}
-
-		resourceParts := segments
-		if len(baseParts) > 0 && hasPrefixSegments(segments, baseParts) && len(segments) > len(baseParts) {
-			resourceParts = segments[len(baseParts):]
-		}
+		resourceParts := extractResourceParts(input.Endpoint, baseParts)
 		if len(resourceParts) == 0 {
 			return EventInfo{}
 		}
@@ -105,7 +143,13 @@ func NewCoreLikeEventInfoDeriver(cfg CoreLikeEventDeriverConfig) EventInfoDerive
 			category = strings.ToUpper(normalizeEventToken(table))
 			resource = table
 		} else {
-			resource = resourceParts[0]
+			if strictTableMatch && len(tables) > 0 {
+				return EventInfo{}
+			}
+			resource = firstCategorySegment(resourceParts)
+			if resource == "" {
+				return EventInfo{}
+			}
 			category = strings.ToUpper(normalizeEventToken(resource))
 		}
 		if category == "" {
@@ -166,33 +210,22 @@ func deriveEventNameFromEndpoint(endpoint string) string {
 	if path == "" {
 		return ""
 	}
-
-	segments := normalizedPathSegments(path)
-	if len(segments) == 0 {
+	resourceParts := extractResourceParts(path, nil)
+	if len(resourceParts) == 0 {
 		return ""
 	}
-
-	for i := 0; i+2 < len(segments); i++ {
-		if segments[i] == "api" && strings.HasPrefix(segments[i+1], "v") {
-			return segments[i+2]
-		}
-	}
-
-	return segments[0]
+	return firstCategorySegment(resourceParts)
 }
 
 func deriveEventActionFromEndpoint(endpoint, method string) string {
-	resourceParts := normalizedPathSegments(endpoint)
-	for i := 0; i+2 < len(resourceParts); i++ {
-		if resourceParts[i] == "api" && strings.HasPrefix(resourceParts[i+1], "v") {
-			resourceParts = resourceParts[i+2:]
-			break
-		}
-	}
+	resourceParts := extractResourceParts(endpoint, nil)
 
 	resource := ""
 	if len(resourceParts) > 0 {
-		resource = resourceParts[0]
+		resource = firstCategorySegment(resourceParts)
+		if resource == "" {
+			resource = resourceParts[0]
+		}
 	}
 	return deriveActionFromMethod(method, resourceParts, resource)
 }
@@ -204,6 +237,7 @@ func normalizedPathSegments(path string) []string {
 	if idx := strings.Index(path, "?"); idx >= 0 {
 		path = path[:idx]
 	}
+	path = strings.ReplaceAll(path, "\\", "/")
 	raw := strings.Split(strings.Trim(path, "/"), "/")
 	out := make([]string, 0, len(raw))
 	for _, s := range raw {
@@ -214,6 +248,113 @@ func normalizedPathSegments(path string) []string {
 		out = append(out, strings.ToLower(s))
 	}
 	return out
+}
+
+func extractResourceParts(endpoint string, baseParts []string) []string {
+	if endpointLooksSuspicious(endpoint) {
+		return nil
+	}
+
+	segments := normalizedPathSegments(endpoint)
+	if len(segments) == 0 {
+		return nil
+	}
+
+	if len(baseParts) > 0 && hasPrefixSegments(segments, baseParts) {
+		if len(segments) <= len(baseParts) {
+			return nil
+		}
+		return segments[len(baseParts):]
+	}
+
+	return trimAPIVersionPrefix(segments)
+}
+
+func trimAPIVersionPrefix(segments []string) []string {
+	for i := 0; i+1 < len(segments); i++ {
+		if segments[i] == "api" && isVersionSegment(segments[i+1]) {
+			if len(segments) <= i+2 {
+				return nil
+			}
+			return segments[i+2:]
+		}
+	}
+	return segments
+}
+
+func isVersionSegment(segment string) bool {
+	segment = strings.TrimSpace(strings.ToLower(segment))
+	if len(segment) < 2 || segment[0] != 'v' {
+		return false
+	}
+	for _, r := range segment[1:] {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func firstCategorySegment(segments []string) string {
+	for _, segment := range segments {
+		if isCategorySegmentCandidate(segment) {
+			return segment
+		}
+	}
+	return ""
+}
+
+func isCategorySegmentCandidate(segment string) bool {
+	segment = strings.TrimSpace(strings.ToLower(segment))
+	if segment == "" {
+		return false
+	}
+	if segment == "." || segment == ".." {
+		return false
+	}
+	if strings.Contains(segment, "..") || strings.ContainsAny(segment, `\*,;`) {
+		return false
+	}
+	if strings.HasPrefix(segment, ".") || looksLikeStaticAsset(segment) {
+		return false
+	}
+	if looksLikeIdentifier(segment) {
+		return false
+	}
+
+	normalized := normalizeEventToken(segment)
+	if normalized == "" || isVersionSegment(normalized) {
+		return false
+	}
+	if _, ignored := ignoredEventCategoryTokens[normalized]; ignored {
+		return false
+	}
+
+	hasLetter := false
+	for _, r := range normalized {
+		if unicode.IsLetter(r) {
+			hasLetter = true
+			break
+		}
+	}
+	return hasLetter
+}
+
+func looksLikeStaticAsset(segment string) bool {
+	ext := strings.ToLower(path.Ext(segment))
+	if ext == "" {
+		return false
+	}
+	_, ok := staticAssetExtensions[ext]
+	return ok
+}
+
+func endpointLooksSuspicious(endpoint string) bool {
+	path := strings.TrimSpace(strings.ToLower(endpoint))
+	if path == "" {
+		return false
+	}
+	return strings.Contains(path, "..") || strings.Contains(path, `\`) || strings.Contains(path, "*")
 }
 
 func hasPrefixSegments(segments, prefix []string) bool {
@@ -325,10 +466,26 @@ func looksLikeIdentifier(value string) bool {
 	if allDigits {
 		return true
 	}
-	if strings.Contains(value, "-") && len(value) >= 8 {
-		return true
+	return looksLikeUUID(value)
+}
+
+func looksLikeUUID(value string) bool {
+	if len(value) < 8 || !strings.Contains(value, "-") {
+		return false
 	}
-	return false
+	for _, r := range value {
+		if r == '-' {
+			continue
+		}
+		if !isHexDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func isHexDigit(r rune) bool {
+	return (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
 }
 
 func normalizeEventToken(value string) string {
@@ -336,9 +493,27 @@ func normalizeEventToken(value string) string {
 	if value == "" {
 		return ""
 	}
-	value = strings.ReplaceAll(value, "-", "_")
-	value = strings.ReplaceAll(value, " ", "_")
-	return value
+
+	var b strings.Builder
+	prevUnderscore := false
+	for _, r := range value {
+		switch {
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			b.WriteRune(r)
+			prevUnderscore = false
+		case r == '-' || r == '_' || unicode.IsSpace(r) || r == '.' || r == '/':
+			if !prevUnderscore {
+				b.WriteByte('_')
+				prevUnderscore = true
+			}
+		default:
+			if !prevUnderscore {
+				b.WriteByte('_')
+				prevUnderscore = true
+			}
+		}
+	}
+	return strings.Trim(b.String(), "_")
 }
 
 func buildEventDescription(input EventDeriverInput, rawResource, action string) string {
