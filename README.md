@@ -251,7 +251,7 @@ Notes:
 
 - `Endpoint` is stored in DB field `api_part`.
 - `ProjectIDs` is stored as JSON/JSONB array.
-- if `EventCategory` / `EventName` are not provided, library falls back to URL segment after `/api/v1/` (for example `/api/v1/payment-request` -> `payment-request`)
+- if `EventCategory` / `EventName` are not provided, library falls back to URL-derived resource segments (suspicious/probe-style paths and static asset routes are ignored)
 - if `Config.EventInfoDeriver` is provided, it is used first for category/name/description fallback
 - if `Config.EventDeriver` is provided, it is used for category/name fallback when event info deriver does not provide those values
 
@@ -261,6 +261,7 @@ Event deriver options:
 - `DefaultEventInfoDeriver`: default endpoint/method/status-based fallback including description
 - `NewCoreLikeEventDeriver`: helper that approximates `test/core` `deriveEventInfo` style (`CATEGORY_ACTION`)
 - `NewCoreLikeEventInfoDeriver`: helper that approximates `test/core` `deriveEventInfo` style (`CATEGORY_ACTION`) and description text
+- `CoreLikeEventDeriverConfig.StrictTableMatch`: when `true` and `TableNames` is set, only matched table/service names are emitted as categories; unknown routes are ignored
 
 Example:
 
@@ -268,8 +269,9 @@ Example:
 client, err := activitylog.New(activitylog.Config{
 	DB: db,
 	EventInfoDeriver: activitylog.NewCoreLikeEventInfoDeriver(activitylog.CoreLikeEventDeriverConfig{
-		BasePath:   "/api/v1",
-		TableNames: []string{"members", "payment_requests", "withdrawals"},
+		BasePath:         "/api/v1",
+		TableNames:       []string{"members", "payment_requests", "withdrawals"},
+		StrictTableMatch: true,
 	}),
 })
 ```

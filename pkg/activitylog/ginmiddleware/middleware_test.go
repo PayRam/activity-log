@@ -419,3 +419,28 @@ func TestMiddlewareGeoLookup(t *testing.T) {
 		t.Fatalf("expected geolocation city to be populated")
 	}
 }
+
+func TestMiddlewareSkipsBinaryResponseBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &stubService{}
+	client := newTestClient(t, svc)
+	router := gin.New()
+	router.Use(Middleware(Config{
+		Client:              client,
+		CaptureResponseBody: true,
+	}))
+	router.GET("/uploads/test.png", func(c *gin.Context) {
+		c.Data(http.StatusOK, "image/png", []byte{0x89, 0x50, 0x4e, 0x47})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/uploads/test.png", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if len(svc.updated) != 1 {
+		t.Fatalf("expected 1 update call, got %d", len(svc.updated))
+	}
+	if svc.updated[0].ResponseBody != nil {
+		t.Fatalf("expected binary response body to be skipped")
+	}
+}

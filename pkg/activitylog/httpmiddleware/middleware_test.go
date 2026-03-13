@@ -418,3 +418,27 @@ func TestMiddlewareGeoLookup(t *testing.T) {
 		t.Fatalf("expected geolocation timezone to be populated")
 	}
 }
+
+func TestMiddlewareSkipsBinaryResponseBody(t *testing.T) {
+	svc := &stubService{}
+	client := newTestClient(t, svc)
+	handler := Middleware(Config{
+		Client:              client,
+		CaptureResponseBody: true,
+	})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte{0x89, 0x50, 0x4e, 0x47})
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/uploads/test.png", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if len(svc.updated) != 1 {
+		t.Fatalf("expected 1 update call, got %d", len(svc.updated))
+	}
+	if svc.updated[0].ResponseBody != nil {
+		t.Fatalf("expected binary response body to be skipped")
+	}
+}

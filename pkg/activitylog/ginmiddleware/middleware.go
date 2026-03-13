@@ -2,6 +2,7 @@ package ginmiddleware
 
 import (
 	"context"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -163,7 +164,8 @@ func Middleware(configs ...Config) gin.HandlerFunc {
 			StatusCode:  &statusCode,
 			RequestBody: requestBody,
 		}
-		if cfg.CaptureResponseBody && body != "" {
+		contentType := c.Writer.Header().Get("Content-Type")
+		if cfg.CaptureResponseBody && body != "" && shouldCaptureResponseBody(contentType, endpoint) {
 			body = redactResponseBody(cfg, body)
 			updateReq.ResponseBody = &body
 		}
@@ -229,6 +231,32 @@ func readRequestBody(cfg Config, c *gin.Context, maxBytes int64) (*string, error
 		return nil, nil
 	}
 	return middleware.ReadRequestBody(c.Request, maxBytes, cfg.Redact)
+}
+
+func shouldCaptureResponseBody(contentType, endpoint string) bool {
+	if strings.HasPrefix(endpoint, "/uploads/") {
+		return false
+	}
+
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mediaType = strings.TrimSpace(strings.Split(contentType, ";")[0])
+	}
+	mediaType = strings.ToLower(strings.TrimSpace(mediaType))
+	if mediaType == "" {
+		return true
+	}
+
+	if strings.HasPrefix(mediaType, "text/") {
+		return true
+	}
+
+	switch mediaType {
+	case "application/json", "application/xml", "application/javascript", "application/x-www-form-urlencoded":
+		return true
+	default:
+		return false
+	}
 }
 
 func redactResponseBody(cfg Config, body string) string {
