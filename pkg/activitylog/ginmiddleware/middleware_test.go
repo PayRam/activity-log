@@ -424,11 +424,17 @@ func TestMiddlewareSkipsBinaryResponseBody(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &stubService{}
 	client := newTestClient(t, svc)
+	var capturedBody string
 	router := gin.New()
 	router.Use(Middleware(Config{
 		Client:                client,
 		CaptureResponseBody:   true,
 		SkipResponseBodyPaths: []string{"/uploads/"},
+		UpdateEnricher: func(c *gin.Context, req *activitylog.UpdateRequest, resp *CapturedResponse) {
+			if resp != nil {
+				capturedBody = resp.Body
+			}
+		},
 	}))
 	router.GET("/uploads/test.png", func(c *gin.Context) {
 		c.Data(http.StatusOK, "image/png", []byte{0x89, 0x50, 0x4e, 0x47})
@@ -443,5 +449,8 @@ func TestMiddlewareSkipsBinaryResponseBody(t *testing.T) {
 	}
 	if svc.updated[0].ResponseBody != nil {
 		t.Fatalf("expected binary response body to be skipped")
+	}
+	if capturedBody != "" {
+		t.Fatalf("expected captured response body passed to enricher to be empty, got %q", capturedBody)
 	}
 }
