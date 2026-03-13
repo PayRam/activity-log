@@ -423,8 +423,9 @@ func TestMiddlewareSkipsBinaryResponseBody(t *testing.T) {
 	svc := &stubService{}
 	client := newTestClient(t, svc)
 	handler := Middleware(Config{
-		Client:              client,
-		CaptureResponseBody: true,
+		Client:                client,
+		CaptureResponseBody:   true,
+		SkipResponseBodyPaths: []string{"/uploads/"},
 	})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		w.WriteHeader(http.StatusOK)

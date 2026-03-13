@@ -2,7 +2,6 @@ package httpmiddleware
 
 import (
 	"context"
-	"mime"
 	"net"
 	"net/http"
 	"strings"
@@ -40,8 +39,9 @@ type Config struct {
 	Redact              func([]byte) []byte
 	ResponseRedact      func([]byte) []byte
 
-	SkipPaths []string
-	Skip      func(*http.Request) bool
+	SkipPaths             []string
+	SkipResponseBodyPaths []string
+	Skip                  func(*http.Request) bool
 
 	SessionIDHeader string
 	SessionIDFunc   func(*http.Request) string
@@ -166,7 +166,7 @@ func Middleware(configs ...Config) func(http.Handler) http.Handler {
 				RequestBody: requestBody,
 			}
 			contentType := recorder.Header().Get("Content-Type")
-			if cfg.CaptureResponseBody && body != "" && shouldCaptureResponseBody(contentType, endpoint) {
+			if cfg.CaptureResponseBody && body != "" && middleware.ShouldCaptureResponseBody(contentType, endpoint, cfg.SkipResponseBodyPaths) {
 				body = redactResponseBody(cfg, body)
 				updateReq.ResponseBody = &body
 			}
@@ -256,32 +256,6 @@ func readRequestBody(cfg Config, r *http.Request, maxBytes int64) (*string, erro
 		return nil, nil
 	}
 	return middleware.ReadRequestBody(r, maxBytes, cfg.Redact)
-}
-
-func shouldCaptureResponseBody(contentType, endpoint string) bool {
-	if strings.HasPrefix(endpoint, "/uploads/") {
-		return false
-	}
-
-	mediaType, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		mediaType = strings.TrimSpace(strings.Split(contentType, ";")[0])
-	}
-	mediaType = strings.ToLower(strings.TrimSpace(mediaType))
-	if mediaType == "" {
-		return true
-	}
-
-	if strings.HasPrefix(mediaType, "text/") {
-		return true
-	}
-
-	switch mediaType {
-	case "application/json", "application/xml", "application/javascript", "application/x-www-form-urlencoded":
-		return true
-	default:
-		return false
-	}
 }
 
 func redactResponseBody(cfg Config, body string) string {

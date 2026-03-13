@@ -426,8 +426,9 @@ func TestMiddlewareSkipsBinaryResponseBody(t *testing.T) {
 	client := newTestClient(t, svc)
 	router := gin.New()
 	router.Use(Middleware(Config{
-		Client:              client,
-		CaptureResponseBody: true,
+		Client:                client,
+		CaptureResponseBody:   true,
+		SkipResponseBodyPaths: []string{"/uploads/"},
 	}))
 	router.GET("/uploads/test.png", func(c *gin.Context) {
 		c.Data(http.StatusOK, "image/png", []byte{0x89, 0x50, 0x4e, 0x47})
