@@ -151,7 +151,6 @@ func Middleware(configs ...Config) gin.HandlerFunc {
 		}
 
 		status := recorder.Status()
-		body := recorder.Body()
 		apiStatus := activitylog.APIStatus(middleware.StatusToAPIStatus(status))
 		method := c.Request.Method
 		endpoint := c.Request.URL.Path
@@ -164,10 +163,13 @@ func Middleware(configs ...Config) gin.HandlerFunc {
 			StatusCode:  &statusCode,
 			RequestBody: requestBody,
 		}
+		body := ""
 		contentType := c.Writer.Header().Get("Content-Type")
-		if cfg.CaptureResponseBody && body != "" && middleware.ShouldCaptureResponseBody(contentType, endpoint, cfg.SkipResponseBodyPaths) {
-			body = redactResponseBody(cfg, body)
-			updateReq.ResponseBody = &body
+		if cfg.CaptureResponseBody && middleware.ShouldCaptureResponseBody(contentType, endpoint, cfg.SkipResponseBodyPaths) {
+			body = redactResponseBody(cfg, recorder.Body())
+			if body != "" {
+				updateReq.ResponseBody = &body
+			}
 		}
 
 		captured := &CapturedResponse{StatusCode: status, Body: body}
