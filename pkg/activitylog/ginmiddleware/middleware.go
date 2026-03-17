@@ -36,8 +36,9 @@ type Config struct {
 	Redact              func([]byte) []byte
 	ResponseRedact      func([]byte) []byte
 
-	SkipPaths []string
-	Skip      func(*gin.Context) bool
+	SkipPaths             []string
+	SkipResponseBodyPaths []string
+	Skip                  func(*gin.Context) bool
 
 	SessionIDHeader string
 	SessionIDFunc   func(*gin.Context) string
@@ -150,7 +151,6 @@ func Middleware(configs ...Config) gin.HandlerFunc {
 		}
 
 		status := recorder.Status()
-		body := recorder.Body()
 		apiStatus := activitylog.APIStatus(middleware.StatusToAPIStatus(status))
 		method := c.Request.Method
 		endpoint := c.Request.URL.Path
@@ -163,9 +163,13 @@ func Middleware(configs ...Config) gin.HandlerFunc {
 			StatusCode:  &statusCode,
 			RequestBody: requestBody,
 		}
-		if cfg.CaptureResponseBody && body != "" {
-			body = redactResponseBody(cfg, body)
-			updateReq.ResponseBody = &body
+		body := ""
+		contentType := c.Writer.Header().Get("Content-Type")
+		if cfg.CaptureResponseBody && middleware.ShouldCaptureResponseBody(contentType, endpoint, cfg.SkipResponseBodyPaths) {
+			body = redactResponseBody(cfg, recorder.Body())
+			if body != "" {
+				updateReq.ResponseBody = &body
+			}
 		}
 
 		captured := &CapturedResponse{StatusCode: status, Body: body}

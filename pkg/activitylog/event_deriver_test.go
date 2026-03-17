@@ -15,6 +15,26 @@ func TestDefaultEventDeriver(t *testing.T) {
 	}
 }
 
+func TestDefaultEventDeriver_IgnoresSuspiciousEndpoint(t *testing.T) {
+	category, name := DefaultEventDeriver(EventDeriverInput{
+		Endpoint: "/..\\..\\..\\etc\\passwd",
+		Method:   "GET",
+	})
+	if category != "" || name != "" {
+		t.Fatalf("expected suspicious endpoint to be ignored, got category=%q name=%q", category, name)
+	}
+}
+
+func TestDefaultEventDeriver_SkipsInfraSegments(t *testing.T) {
+	category, name := DefaultEventDeriver(EventDeriverInput{
+		Endpoint: "/api/v1/.well-known/members",
+		Method:   "GET",
+	})
+	if category != "members" || name != "members" {
+		t.Fatalf("expected members fallback, got category=%q name=%q", category, name)
+	}
+}
+
 func TestNewCoreLikeEventDeriver_TableMatch(t *testing.T) {
 	deriver := NewCoreLikeEventDeriver(CoreLikeEventDeriverConfig{
 		BasePath:   "/api/v1",
@@ -45,6 +65,22 @@ func TestNewCoreLikeEventDeriver_Fallback(t *testing.T) {
 	}
 	if name != "PROJECT_CREATE" {
 		t.Fatalf("expected fallback name PROJECT_CREATE, got %q", name)
+	}
+}
+
+func TestNewCoreLikeEventDeriver_StrictTableMatch(t *testing.T) {
+	deriver := NewCoreLikeEventDeriver(CoreLikeEventDeriverConfig{
+		BasePath:         "/api/v1",
+		TableNames:       []string{"members", "payment_requests"},
+		StrictTableMatch: true,
+	})
+
+	category, name := deriver(EventDeriverInput{
+		Endpoint: "/api/v1/withdrawals",
+		Method:   "GET",
+	})
+	if category != "" || name != "" {
+		t.Fatalf("expected strict table match to drop unknown route, got category=%q name=%q", category, name)
 	}
 }
 

@@ -39,8 +39,9 @@ type Config struct {
 	Redact              func([]byte) []byte
 	ResponseRedact      func([]byte) []byte
 
-	SkipPaths []string
-	Skip      func(*http.Request) bool
+	SkipPaths             []string
+	SkipResponseBodyPaths []string
+	Skip                  func(*http.Request) bool
 
 	SessionIDHeader string
 	SessionIDFunc   func(*http.Request) string
@@ -164,7 +165,8 @@ func Middleware(configs ...Config) func(http.Handler) http.Handler {
 				StatusCode:  &statusCode,
 				RequestBody: requestBody,
 			}
-			if cfg.CaptureResponseBody && body != "" {
+			contentType := recorder.Header().Get("Content-Type")
+			if cfg.CaptureResponseBody && body != "" && middleware.ShouldCaptureResponseBody(contentType, endpoint, cfg.SkipResponseBodyPaths) {
 				body = redactResponseBody(cfg, body)
 				updateReq.ResponseBody = &body
 			}
